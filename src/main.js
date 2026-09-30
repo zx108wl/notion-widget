@@ -25,6 +25,8 @@ async function renderWidget(widgetId) {
     const config = Object.fromEntries(component.fields.map((field) => [field.key, readParam(params, field)]));
     document.title = `${widget.name} · Notion Widget`;
     document.documentElement.dataset.theme = config.theme || "auto";
+    document.documentElement.style.setProperty("--widget-width", `${config.width}px`);
+    document.documentElement.style.setProperty("--widget-height", `${config.height}px`);
     component.render(app, config);
   } catch (error) {
     console.error(error);
@@ -61,7 +63,10 @@ function renderConfigurator() {
             <div><p class="eyebrow">PREVIEW</p><h2>实时预览</h2></div>
             <button id="open-preview" class="button secondary" type="button">新窗口打开</button>
           </div>
-          <div class="preview-frame-wrap"><iframe id="preview" title="组件实时预览"></iframe></div>
+          <div class="preview-stage">
+            <div id="preview-frame" class="preview-frame-wrap"><iframe id="preview" title="组件实时预览"></iframe></div>
+          </div>
+          <p class="preview-size-hint">拖动预览框右下角可调整组件尺寸</p>
           <label class="url-field"><span>嵌入 URL</span><div class="url-row"><input id="result-url" readonly /><button id="copy-url" class="button primary" type="button">复制 URL</button></div></label>
           <p id="copy-status" class="copy-status" role="status"></p>
         </section>
@@ -70,6 +75,7 @@ function renderConfigurator() {
 
   const list = document.querySelector("#widget-list");
   const form = document.querySelector("#config-form");
+  const previewFrame = document.querySelector("#preview-frame");
   const preview = document.querySelector("#preview");
   const resultUrl = document.querySelector("#result-url");
   const copyStatus = document.querySelector("#copy-status");
@@ -84,8 +90,8 @@ function renderConfigurator() {
     list.append(button);
   });
 
-  form.addEventListener("input", updateUrl);
-  form.addEventListener("change", updateUrl);
+  form.addEventListener("input", () => updateUrl());
+  form.addEventListener("change", () => updateUrl());
   document.querySelector("#copy-url").addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(resultUrl.value);
@@ -98,6 +104,19 @@ function renderConfigurator() {
   document.querySelector("#open-preview").addEventListener("click", () => window.open(resultUrl.value, "_blank", "noopener,noreferrer"));
 
   let selectionVersion = 0;
+  let resizeTimer;
+
+  new ResizeObserver(([entry]) => {
+    const widget = widgets[selectedId];
+    if (!widget?.component || !form.elements.namedItem("width") || !form.elements.namedItem("height")) return;
+    const width = String(Math.round(entry.contentRect.width));
+    const height = String(Math.round(entry.contentRect.height));
+    if (form.elements.namedItem("width").value === width && form.elements.namedItem("height").value === height) return;
+    form.elements.namedItem("width").value = width;
+    form.elements.namedItem("height").value = height;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => updateUrl(false), 120);
+  }).observe(previewFrame);
 
   async function selectWidget(widgetId) {
     const version = ++selectionVersion;
@@ -122,7 +141,7 @@ function renderConfigurator() {
     }
   }
 
-  function updateUrl() {
+  function updateUrl(syncPreviewSize = true) {
     const widget = widgets[selectedId];
     if (!widget.component) return;
     const data = new FormData(form);
@@ -135,6 +154,10 @@ function renderConfigurator() {
     const query = params.toString();
     const url = `${window.location.origin}/widget/${widget.id}${query ? `?${query}` : ""}`;
     resultUrl.value = url;
+    if (syncPreviewSize) {
+      previewFrame.style.width = `${form.elements.namedItem("width").value}px`;
+      previewFrame.style.height = `${form.elements.namedItem("height").value}px`;
+    }
     preview.src = url;
     copyStatus.textContent = "";
   }

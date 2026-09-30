@@ -48,8 +48,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .switch input:checked + span { background: var(--accent); }
 .switch input:checked + span::after { transform: translateX(16px); }
 .preview-heading { align-items: center; margin-bottom: 16px; }
-.preview-frame-wrap { min-height: 300px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--page); }
-.preview-frame-wrap iframe { width: 100%; height: 300px; border: 0; background: transparent; }
+.preview-stage { max-width: 100%; overflow: auto; padding: 2px 0 14px 2px; }
+.preview-frame-wrap { position: relative; box-sizing: content-box; width: 520px; height: 300px; min-width: 280px; min-height: 160px; max-width: 1200px; max-height: 1000px; overflow: hidden; resize: both; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--page); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent); }
+.preview-frame-wrap::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 9px; height: 9px; pointer-events: none; border-right: 2px solid var(--text-faint); border-bottom: 2px solid var(--text-faint); }
+.preview-frame-wrap iframe { width: 100%; height: 100%; border: 0; background: transparent; }
+.preview-size-hint { margin: -4px 0 0; color: var(--text-faint); font-size: 12px; }
 .button { height: 38px; padding: 0 14px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 680; cursor: pointer; }
 .button.primary { color: var(--brand-text); background: var(--brand); }
 .button.secondary { color: var(--text); background: var(--secondary); }
@@ -59,7 +62,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .url-row input { color: var(--text-muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
 .copy-status { min-height: 18px; margin: 8px 0 0; color: #16805a; font-size: 12px; }
 .load-error { margin: 0; color: #c33e35; font-size: 13px; }
-.widget-page { min-height: 100vh; display: grid; place-items: center; padding: 14px; background: transparent; }
+.widget-page { width: var(--widget-width); height: var(--widget-height); min-height: 0; overflow: hidden; background: transparent; }
+.widget-page #app { width: 100%; height: 100%; min-height: 0; }
 .error-card { width: min(100%, 560px); padding: 28px; border: 1px solid #deddd7; border-radius: 18px; background: white; }
 @media (prefers-color-scheme: dark) {
   .config-page { --page: #191918; --surface: #242423; --surface-soft: #20201f; --surface-muted: #30302e; --control: #2b2b29; --control-disabled: #252524; --border: #3b3b38; --border-strong: #52514d; --text: #f1f1ef; --text-soft: #d2d1cc; --text-muted: #b5b4af; --text-faint: #aaa9a5; --brand: #f1f1ef; --brand-text: #25241f; --secondary: #383836; }

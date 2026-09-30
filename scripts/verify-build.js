@@ -22,6 +22,12 @@ for (const widgetId of registeredIds) {
   const module = await import(`${pathToFileURL(jsPath).href}?verify=${Date.now()}`);
   if (!Array.isArray(module.fields)) throw new Error(`组件 ${widgetId} 未导出 fields`);
   if (typeof module.render !== "function") throw new Error(`组件 ${widgetId} 未导出 render`);
+  for (const dimension of ["width", "height"]) {
+    const field = module.fields.find(({ key }) => key === dimension);
+    if (!field || field.type !== "number" || field.min === undefined || field.max === undefined) {
+      throw new Error(`组件 ${widgetId} 缺少有效的 ${dimension} 尺寸配置`);
+    }
+  }
 
   if (!Array.isArray(entry.css) || entry.css.length === 0) {
     throw new Error(`组件 ${widgetId} 没有独立 CSS 产物`);

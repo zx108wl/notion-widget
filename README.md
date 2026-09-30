@@ -25,6 +25,9 @@ Vite 会把 `/api` 请求转发到本地 API。
 https://widget.example.com/widget/{widget_id}?参数=值
 ```
 
+所有组件都支持 `width` 和 `height` 参数（单位为像素），例如
+`/widget/clock?width=520&height=300`。组件会完整铺满这块嵌入画布；在组件中心拖动实时预览框的右下角，也会同步更新尺寸参数和生成的 URL。
+
 当前内置组件：
 
 | widget_id | 组件 |
