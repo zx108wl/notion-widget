@@ -1,0 +1,11 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+dist
+*.log
+README.md
+compose.yaml
+deploy/openresty-location.conf
