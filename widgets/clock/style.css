@@ -4,7 +4,7 @@
 .clock-time { display: block; font-size: clamp(42px, 13vw, 76px); font-weight: 760; letter-spacing: -.05em; line-height: 1; font-variant-numeric: tabular-nums; }
 .clock-date { margin: 14px 0 0; color: #77756e; font-size: 14px; }
 .clock-weather { min-width: 96px; display: grid; justify-items: end; align-content: center; text-align: right; }
-.weather-icon { font-size: clamp(28px, 7vw, 42px); line-height: 1; }
+.weather-icon { font-size: clamp(42px, 10.5vw, 63px); line-height: 1; }
 .weather-temperature { margin-top: 10px; font-size: clamp(24px, 6vw, 36px); line-height: 1; font-variant-numeric: tabular-nums; }
 .weather-condition { color: #77756e; font-size: 12px; line-height: 1.5; }
 .weather-condition { margin-top: 8px; }
