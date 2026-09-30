@@ -26,7 +26,7 @@ async function renderWidget(widgetId) {
     document.title = `${widget.name} · Notion Widget`;
     document.documentElement.dataset.theme = config.theme || "auto";
     document.documentElement.style.setProperty("--widget-width", config.width ? `${config.width}px` : "auto");
-    document.documentElement.style.setProperty("--widget-height", `${config.height}px`);
+    document.documentElement.style.setProperty("--widget-height", config.height ? `${config.height}px` : "auto");
     component.render(app, config);
   } catch (error) {
     console.error(error);
@@ -166,8 +166,9 @@ function renderConfigurator() {
     resultUrl.value = url;
     if (syncPreviewSize) {
       const width = form.elements.namedItem("width").value;
+      const height = form.elements.namedItem("height").value;
       previewFrame.style.width = width ? `${width}px` : "auto";
-      previewFrame.style.height = `${form.elements.namedItem("height").value}px`;
+      previewFrame.style.height = height ? `${height}px` : "auto";
     }
     preview.src = url;
     copyStatus.textContent = "";
