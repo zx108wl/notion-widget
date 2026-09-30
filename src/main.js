@@ -66,7 +66,7 @@ function renderConfigurator() {
           <div class="preview-stage">
             <div id="preview-frame" class="preview-frame-wrap"><iframe id="preview" title="组件实时预览"></iframe></div>
           </div>
-          <p class="preview-size-hint">拖动预览框右下角可调整组件尺寸</p>
+          <p class="preview-size-hint">拖动预览框右下角可调整显示区域，不会改变组件尺寸</p>
           <label class="url-field"><span>嵌入 URL</span><div class="url-row"><input id="result-url" readonly /><button id="copy-url" class="button primary" type="button">复制 URL</button></div></label>
           <p id="copy-status" class="copy-status" role="status"></p>
         </section>
@@ -75,7 +75,6 @@ function renderConfigurator() {
 
   const list = document.querySelector("#widget-list");
   const form = document.querySelector("#config-form");
-  const previewFrame = document.querySelector("#preview-frame");
   const preview = document.querySelector("#preview");
   const resultUrl = document.querySelector("#result-url");
   const copyStatus = document.querySelector("#copy-status");
@@ -104,29 +103,6 @@ function renderConfigurator() {
   document.querySelector("#open-preview").addEventListener("click", () => window.open(resultUrl.value, "_blank", "noopener,noreferrer"));
 
   let selectionVersion = 0;
-  let resizeTimer;
-  let isResizingPreview = false;
-
-  previewFrame.addEventListener("pointerdown", (event) => {
-    const bounds = previewFrame.getBoundingClientRect();
-    isResizingPreview = event.clientX >= bounds.right - 20 && event.clientY >= bounds.bottom - 20;
-  });
-  window.addEventListener("pointerup", () => {
-    setTimeout(() => { isResizingPreview = false; }, 0);
-  });
-
-  new ResizeObserver(([entry]) => {
-    if (!isResizingPreview) return;
-    const widget = widgets[selectedId];
-    if (!widget?.component || !form.elements.namedItem("width") || !form.elements.namedItem("height")) return;
-    const width = String(Math.round(entry.contentRect.width));
-    const height = String(Math.round(entry.contentRect.height));
-    if (form.elements.namedItem("width").value === width && form.elements.namedItem("height").value === height) return;
-    form.elements.namedItem("width").value = width;
-    form.elements.namedItem("height").value = height;
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => updateUrl(false), 120);
-  }).observe(previewFrame);
 
   async function selectWidget(widgetId) {
     const version = ++selectionVersion;
@@ -151,7 +127,7 @@ function renderConfigurator() {
     }
   }
 
-  function updateUrl(syncPreviewSize = true) {
+  function updateUrl() {
     const widget = widgets[selectedId];
     if (!widget.component) return;
     const data = new FormData(form);
@@ -164,12 +140,6 @@ function renderConfigurator() {
     const query = params.toString();
     const url = `${window.location.origin}/widget/${widget.id}${query ? `?${query}` : ""}`;
     resultUrl.value = url;
-    if (syncPreviewSize) {
-      const width = form.elements.namedItem("width").value;
-      const height = form.elements.namedItem("height").value;
-      previewFrame.style.width = width ? `${width}px` : "auto";
-      previewFrame.style.height = height ? `${height}px` : "auto";
-    }
     preview.src = url;
     copyStatus.textContent = "";
   }
