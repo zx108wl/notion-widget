@@ -28,11 +28,13 @@ npm run check
 1. 将项目上传或克隆到服务器。
 2. 从 `.env.example` 创建 `.env`，只在服务器中填写密钥。
 3. 在 1Panel 的“容器 → 编排”中使用 `compose.yaml` 启动。
-4. 创建反向代理网站，目标地址填写 `http://127.0.0.1:8080`。
+4. 创建反向代理网站，目标地址填写 `http://127.0.0.1:18080`。
 5. 为网站配置域名、HTTPS 和自动续签证书。
 6. 把最终的 `https://widget.example.com` 通过 `/embed` 加入 Notion。
 
 容器不会向公网暴露 API 端口；对外只通过 1Panel OpenResty 的 80/443 访问。
+
+`WEB_PORT` 可以在服务器 `.env` 中修改；默认是 `18080`。修改后，1Panel 反向代理的目标端口也必须保持一致。
 
 ## GitHub 推送部署
 
