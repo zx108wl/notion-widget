@@ -28,6 +28,9 @@ for (const widgetId of registeredIds) {
       throw new Error(`组件 ${widgetId} 缺少有效的 ${dimension} 尺寸配置`);
     }
   }
+  if (module.fields.find(({ key }) => key === "width").default !== "") {
+    throw new Error(`组件 ${widgetId} 的 width 默认值必须为空以保持自适应`);
+  }
 
   if (!Array.isArray(entry.css) || entry.css.length === 0) {
     throw new Error(`组件 ${widgetId} 没有独立 CSS 产物`);

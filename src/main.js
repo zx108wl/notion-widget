@@ -25,7 +25,7 @@ async function renderWidget(widgetId) {
     const config = Object.fromEntries(component.fields.map((field) => [field.key, readParam(params, field)]));
     document.title = `${widget.name} · Notion Widget`;
     document.documentElement.dataset.theme = config.theme || "auto";
-    document.documentElement.style.setProperty("--widget-width", `${config.width}px`);
+    document.documentElement.style.setProperty("--widget-width", config.width ? `${config.width}px` : "auto");
     document.documentElement.style.setProperty("--widget-height", `${config.height}px`);
     component.render(app, config);
   } catch (error) {
@@ -105,8 +105,18 @@ function renderConfigurator() {
 
   let selectionVersion = 0;
   let resizeTimer;
+  let isResizingPreview = false;
+
+  previewFrame.addEventListener("pointerdown", (event) => {
+    const bounds = previewFrame.getBoundingClientRect();
+    isResizingPreview = event.clientX >= bounds.right - 20 && event.clientY >= bounds.bottom - 20;
+  });
+  window.addEventListener("pointerup", () => {
+    setTimeout(() => { isResizingPreview = false; }, 0);
+  });
 
   new ResizeObserver(([entry]) => {
+    if (!isResizingPreview) return;
     const widget = widgets[selectedId];
     if (!widget?.component || !form.elements.namedItem("width") || !form.elements.namedItem("height")) return;
     const width = String(Math.round(entry.contentRect.width));
@@ -155,7 +165,8 @@ function renderConfigurator() {
     const url = `${window.location.origin}/widget/${widget.id}${query ? `?${query}` : ""}`;
     resultUrl.value = url;
     if (syncPreviewSize) {
-      previewFrame.style.width = `${form.elements.namedItem("width").value}px`;
+      const width = form.elements.namedItem("width").value;
+      previewFrame.style.width = width ? `${width}px` : "auto";
       previewFrame.style.height = `${form.elements.namedItem("height").value}px`;
     }
     preview.src = url;
@@ -207,6 +218,7 @@ function readParam(params, field) {
   const value = params.get(field.key);
   if (value === null) return field.default;
   if (field.type === "number") {
+    if (value.trim() === "") return field.default;
     const number = Number(value);
     if (!Number.isFinite(number)) return field.default;
     return String(Math.min(field.max ?? number, Math.max(field.min ?? number, number)));

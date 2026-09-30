@@ -26,7 +26,7 @@ https://widget.example.com/widget/{widget_id}?参数=值
 ```
 
 所有组件都支持 `width` 和 `height` 参数（单位为像素），例如
-`/widget/clock?width=520&height=300`。组件会完整铺满这块嵌入画布；在组件中心拖动实时预览框的右下角，也会同步更新尺寸参数和生成的 URL。
+`/widget/clock?width=520&height=300`。`width` 默认为空，此时使用 `auto` 自动铺满 Notion 的嵌入宽度；填写宽度后则使用固定尺寸。在组件中心拖动实时预览框的右下角，也会同步更新尺寸参数和生成的 URL。
 
 当前内置组件：
 
