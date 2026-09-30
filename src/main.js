@@ -27,6 +27,7 @@ async function renderWidget(widgetId) {
     document.documentElement.dataset.theme = config.theme || "auto";
     document.documentElement.style.setProperty("--widget-width", config.width ? `${config.width}px` : "auto");
     document.documentElement.style.setProperty("--widget-height", config.height ? `${config.height}px` : "auto");
+    document.body.classList.toggle("auto-height", !config.height);
     component.render(app, config);
   } catch (error) {
     console.error(error);
