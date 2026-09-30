@@ -6,17 +6,15 @@
 .clock-weather { min-width: 96px; display: grid; justify-items: end; align-content: center; text-align: right; }
 .weather-icon { font-size: clamp(28px, 7vw, 42px); line-height: 1; }
 .weather-temperature { margin-top: 10px; font-size: clamp(24px, 6vw, 36px); line-height: 1; font-variant-numeric: tabular-nums; }
-.weather-condition, .weather-location { color: #77756e; font-size: 12px; line-height: 1.5; }
+.weather-condition { color: #77756e; font-size: 12px; line-height: 1.5; }
 .weather-condition { margin-top: 8px; }
-.weather-location { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :root[data-theme="dark"] .clock-date { color: #aaa9a5; }
-:root[data-theme="dark"] .weather-condition, :root[data-theme="dark"] .weather-location { color: #aaa9a5; }
+:root[data-theme="dark"] .weather-condition { color: #aaa9a5; }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme="auto"] .clock-date, :root[data-theme="auto"] .weather-condition, :root[data-theme="auto"] .weather-location { color: #aaa9a5; }
+  :root[data-theme="auto"] .clock-date, :root[data-theme="auto"] .weather-condition { color: #aaa9a5; }
 }
 @media (max-width: 420px) {
   .clock-card { column-gap: 14px; }
   .clock-time { font-size: clamp(36px, 12vw, 52px); }
   .clock-weather { min-width: 68px; }
-  .weather-location { max-width: 82px; }
 }

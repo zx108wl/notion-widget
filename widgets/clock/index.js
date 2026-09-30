@@ -28,7 +28,6 @@ export function render(root, config) {
       <span class="weather-icon" aria-hidden="true">·</span>
       <strong class="weather-temperature">--°</strong>
       <span class="weather-condition">正在获取天气</span>
-      <span class="weather-location">当地天气</span>
     </aside>
   </section>`;
   const time = root.querySelector(".clock-time");
@@ -52,8 +51,6 @@ export function render(root, config) {
       weather.querySelector(".weather-icon").textContent = details.icon;
       weather.querySelector(".weather-temperature").textContent = `${Math.round(data.temperature)}${data.unit}`;
       weather.querySelector(".weather-condition").textContent = details.label;
-      weather.querySelector(".weather-location").textContent = `${Number(data.latitude).toFixed(2)}, ${Number(data.longitude).toFixed(2)}`;
-      weather.title = `纬度 ${data.latitude}，经度 ${data.longitude}`;
     } catch (error) {
       console.error(error);
       weather.querySelector(".weather-icon").textContent = "—";
