@@ -1,0 +1,7 @@
+.status-line { display: flex; align-items: center; gap: 10px; font-size: clamp(24px, 7vw, 38px); }
+.status-time { margin: 14px 0 0; color: #77756e; font-size: 14px; }
+.status-dot { width: 13px; height: 13px; border-radius: 50%; background: #d4a72c; box-shadow: 0 0 0 5px rgb(212 167 44 / 15%); }
+.status-card[data-status="ready"] .status-dot { background: #18a66a; box-shadow: 0 0 0 5px rgb(24 166 106 / 15%); }
+.status-card[data-status="error"] .status-dot { background: #d84a40; box-shadow: 0 0 0 5px rgb(216 74 64 / 15%); }
+:root[data-theme="dark"] .status-time { color: #aaa9a5; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .status-time { color: #aaa9a5; } }

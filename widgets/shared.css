@@ -1,0 +1,9 @@
+.embed-card { --accent: #6c5ce7; width: min(100%, 620px); padding: clamp(22px, 6vw, 38px); border: 1px solid rgb(55 53 47 / 14%); border-radius: 18px; color: #302f2a; background: rgb(255 255 255 / 94%); box-shadow: 0 12px 34px rgb(24 22 17 / 8%); }
+.embed-card::before { content: ""; display: block; width: 32px; height: 4px; margin-bottom: 22px; border-radius: 999px; background: var(--accent); }
+.embed-label { margin: 0 0 10px; color: #77756e; font-size: 13px; font-weight: 680; }
+:root[data-theme="dark"] .embed-card { color: #f1f1ef; border-color: rgb(255 255 255 / 14%); background: rgb(31 31 30 / 96%); box-shadow: none; }
+:root[data-theme="dark"] .embed-label { color: #aaa9a5; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] .embed-card { color: #f1f1ef; border-color: rgb(255 255 255 / 14%); background: rgb(31 31 30 / 96%); box-shadow: none; }
+  :root[data-theme="auto"] .embed-label { color: #aaa9a5; }
+}

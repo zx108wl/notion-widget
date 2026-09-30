@@ -1,0 +1,8 @@
+.countdown-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.countdown-grid div { padding: 12px 6px; border-radius: 12px; background: #f4f3ef; text-align: center; }
+.countdown-grid strong, .countdown-grid span { display: block; }
+.countdown-grid strong { font-size: clamp(24px, 8vw, 44px); font-variant-numeric: tabular-nums; }
+.countdown-grid span { margin-top: 4px; color: #77756e; font-size: 11px; }
+.completed-message { margin: 16px 0 0; color: var(--accent); font-weight: 700; }
+:root[data-theme="dark"] .countdown-grid div { background: #292928; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .countdown-grid div { background: #292928; } }

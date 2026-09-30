@@ -17,6 +17,32 @@ npm run dev
 
 Vite 会把 `/api` 请求转发到本地 API。
 
+## 组件路由
+
+访问根页面可浏览、预览和配置现有组件，配置结果会生成可直接放进 Notion `/embed` 的 URL：
+
+```text
+https://widget.example.com/widget/{widget_id}?参数=值
+```
+
+当前内置组件：
+
+| widget_id | 组件 |
+| --- | --- |
+| `clock` | 日期时钟 |
+| `countdown` | 倒计时 |
+| `status` | API 服务状态 |
+
+组件目录维护在 `src/widgets-registry.js`，每个组件的配置、逻辑和样式位于独立的 `widgets/{widget_id}/`。构建脚本逐个编译组件，生成带内容哈希的 JS/CSS 与 `dist/widgets/manifest.json`；路由命中后才加载清单中的对应产物。
+
+新增组件时：
+
+1. 在 `widgets/{widget_id}/index.js` 中导出 `fields` 和 `render`，样式放在同目录。
+2. 在 `src/widgets-registry.js` 注册组件元数据。
+3. 运行 `npm run build`，构建脚本会自动生成入口清单。
+
+组件入口由受控注册表提供，路由参数不能直接拼接任意脚本路径。若组件目录达到上万条，应再把注册表改为后端分页检索；单个组件的加载方式无需变化。
+
 ## 本地检查
 
 ```bash

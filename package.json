@@ -10,10 +10,10 @@
     "dev": "concurrently -k -n api,web -c yellow,cyan \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "node --watch server/index.js",
     "dev:web": "vite",
-    "build": "vite build",
+    "build": "node scripts/build.js",
     "preview": "vite preview",
     "start": "node server/index.js",
-    "check": "node --check server/index.js && vite build"
+    "check": "node --check server/index.js && node scripts/build.js && node scripts/verify-build.js"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
@@ -24,4 +24,3 @@
     "vite": "^7.1.7"
   }
 }
-
