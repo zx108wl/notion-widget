@@ -36,6 +36,9 @@ https://widget.example.com/widget/{widget_id}?参数=值
 | `countdown` | 倒计时 |
 | `status` | API 服务状态 |
 
+日期时钟支持通过 `latitude` 和 `longitude` 参数直接设置天气坐标，例如
+`/widget/clock?latitude=30.2741&longitude=120.1551`。天气数据由后端代理 Open-Meteo 获取并缓存，前端不会暴露服务密钥。
+
 组件目录维护在 `src/widgets-registry.js`，每个组件的配置、逻辑和样式位于独立的 `widgets/{widget_id}/`。构建脚本逐个编译组件，生成带内容哈希的 JS/CSS 与 `dist/widgets/manifest.json`；路由命中后才加载清单中的对应产物。
 
 新增组件时：
