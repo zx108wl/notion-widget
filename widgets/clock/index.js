@@ -1,25 +1,6 @@
 import "../shared.css";
 import "./style.css";
-import { escapeHtml, sharedFields } from "../shared.js";
-
-export const fields = [
-  { key: "title", label: "标题", type: "text", default: "今天" },
-  {
-    key: "timezone", label: "时区", type: "select", default: "Asia/Shanghai",
-    options: [
-      { value: "Asia/Shanghai", label: "上海（UTC+8）" },
-      { value: "Asia/Tokyo", label: "东京（UTC+9）" },
-      { value: "Europe/London", label: "伦敦" },
-      { value: "America/New_York", label: "纽约" },
-      { value: "UTC", label: "UTC" },
-    ],
-  },
-  { key: "seconds", label: "显示秒钟", type: "checkbox", default: "1" },
-  { key: "hour12", label: "使用 12 小时制", type: "checkbox", default: "0" },
-  { key: "latitude", label: "天气纬度", type: "number", default: "31.2304", min: -90, max: 90, step: 0.0001 },
-  { key: "longitude", label: "天气经度", type: "number", default: "121.4737", min: -180, max: 180, step: 0.0001 },
-  ...sharedFields,
-];
+import { escapeHtml } from "../shared.js";
 
 export function render(root, config) {
   root.innerHTML = `<section class="embed-card clock-card" style="--accent:${config.accent}">

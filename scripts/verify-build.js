@@ -1,6 +1,7 @@
 import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { resolveFields, widgetMetadata } from "../src/widget-config.js";
 import { widgets } from "../src/widgets-registry.js";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -20,16 +21,26 @@ for (const widgetId of registeredIds) {
   if (jsStat.size < 100) throw new Error(`组件 ${widgetId} 的 JS 产物异常：${jsStat.size} bytes`);
 
   const module = await import(`${pathToFileURL(jsPath).href}?verify=${Date.now()}`);
-  if (!Array.isArray(module.fields)) throw new Error(`组件 ${widgetId} 未导出 fields`);
+  const config = JSON.parse(await readFile(path.join(dist, entry.config.replace(/^\//, "")), "utf8"));
+  const fields = resolveFields(config, widgetId);
+  const prefix = `/widgets/${widgetId}/`;
+  for (const url of [entry.config, entry.js, ...entry.css]) {
+    if (!url.startsWith(prefix) || url.includes("..")) throw new Error("插件资源不在独立目录内: " + url);
+  }
+  const resolveEntry = value => prefix + value.slice(2);
+  if (resolveEntry(config.entry.js) !== entry.js || JSON.stringify(config.entry.css.map(resolveEntry)) !== JSON.stringify(entry.css)) throw new Error("配置入口与清单不一致: " + widgetId);
+  for (const [key, value] of Object.entries(widgetMetadata(config))) {
+    if (entry[key] !== value) throw new Error("配置元信息与清单不一致: " + widgetId + "/" + key);
+  }
   if (typeof module.render !== "function") throw new Error(`组件 ${widgetId} 未导出 render`);
   for (const dimension of ["width", "height"]) {
-    const field = module.fields.find(({ key }) => key === dimension);
+    const field = fields.find(({ key }) => key === dimension);
     if (!field || field.type !== "number" || field.min === undefined || field.max === undefined) {
       throw new Error(`组件 ${widgetId} 缺少有效的 ${dimension} 尺寸配置`);
     }
   }
   for (const dimension of ["width", "height"]) {
-    if (module.fields.find(({ key }) => key === dimension).default !== "") {
+    if (fields.find(({ key }) => key === dimension).default !== "") {
       throw new Error(`组件 ${widgetId} 的 ${dimension} 默认值必须为空以保持自适应`);
     }
   }

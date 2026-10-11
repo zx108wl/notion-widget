@@ -1,13 +1,6 @@
 import "../shared.css";
 import "./style.css";
-import { escapeHtml, sharedFields } from "../shared.js";
-
-export const fields = [
-  { key: "title", label: "事件名称", type: "text", default: "距离目标还有" },
-  { key: "target", label: "目标时间", type: "datetime-local", default: defaultTarget() },
-  { key: "completed", label: "结束提示", type: "text", default: "目标时间已到" },
-  ...sharedFields,
-];
+import { escapeHtml } from "../shared.js";
 
 export function render(root, config) {
   root.innerHTML = `<section class="embed-card countdown-card" style="--accent:${config.accent}"><p class="embed-label">${escapeHtml(config.title)}</p><div class="countdown-grid">${["天", "小时", "分钟", "秒"].map((unit, index) => `<div><strong data-part="${index}">--</strong><span>${unit}</span></div>`).join("")}</div><p class="completed-message" hidden>${escapeHtml(config.completed)}</p></section>`;
@@ -22,10 +15,4 @@ export function render(root, config) {
   };
   update();
   setInterval(update, 1000);
-}
-
-function defaultTarget() {
-  const date = new Date(Date.now() + 7 * 86_400_000);
-  date.setSeconds(0, 0);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }

@@ -1,13 +1,25 @@
 import "./style.css";
-import { widgets } from "./widgets-registry.js";
+import { resolveFields } from "./widget-config.js";
+let widgets = {};
 
 const app = document.querySelector("#app");
 const widgetMatch = window.location.pathname.match(/^\/widget\/([^/]+)\/?$/);
 const moduleCache = new Map();
+const configCache = new Map();
 let manifestPromise;
 
-if (widgetMatch) renderWidget(decodeURIComponent(widgetMatch[1]));
-else renderConfigurator();
+initialize();
+
+async function initialize() {
+  try {
+    widgets = await loadManifest();
+    if (widgetMatch) await renderWidget(decodeURIComponent(widgetMatch[1]));
+    else renderConfigurator();
+  } catch (error) {
+    console.error(error);
+    app.innerHTML = '<p class="load-error">插件清单加载失败，请刷新重试。</p>';
+  }
+}
 
 async function renderWidget(widgetId) {
   const widget = widgets[widgetId];
@@ -85,7 +97,7 @@ function renderConfigurator() {
     button.type = "button";
     button.className = "widget-option";
     button.dataset.widgetId = widget.id;
-    button.innerHTML = `<span class="widget-icon">${widget.icon}</span><span><strong>${escapeHtml(widget.name)}</strong><small>${escapeHtml(widget.summary)}</small></span>`;
+    button.innerHTML = `<span class="widget-icon">${escapeHtml(widget.icon)}</span><span><strong>${escapeHtml(widget.name)}</strong><small>${escapeHtml(widget.summary)}</small></span>`;
     button.addEventListener("click", () => selectWidget(widget.id));
     list.append(button);
   });
@@ -113,14 +125,16 @@ function renderConfigurator() {
     document.querySelector("#editor-title").textContent = widget.name;
     document.querySelector("#editor-description").textContent = widget.description;
     document.querySelector("#widget-path").textContent = `/widget/${widget.id}`;
+    delete form.dataset.widgetId;
     form.innerHTML = `<p class="muted">正在加载组件配置…</p>`;
     history.replaceState(null, "", `/?widget=${encodeURIComponent(widgetId)}`);
     copyStatus.textContent = "";
     try {
-      const component = await loadWidget(widget);
+      const fields = await loadWidgetConfig(widget.id);
       if (version !== selectionVersion) return;
-      widget.component = component;
-      form.replaceChildren(...component.fields.map(createField));
+      widget.fields = fields;
+      form.dataset.widgetId = widgetId;
+      form.replaceChildren(...fields.map(createField));
       updateUrl();
     } catch (error) {
       console.error(error);
@@ -130,10 +144,10 @@ function renderConfigurator() {
 
   function updateUrl() {
     const widget = widgets[selectedId];
-    if (!widget.component) return;
+    if (!widget.fields || form.dataset.widgetId !== selectedId) return;
     const data = new FormData(form);
     const params = new URLSearchParams();
-    widget.component.fields.forEach((field) => {
+    widget.fields.forEach((field) => {
       const control = form.elements.namedItem(field.key);
       const value = field.type === "checkbox" ? (control.checked ? "1" : "0") : String(data.get(field.key) ?? "").trim();
       if (value !== String(field.default)) params.set(field.key, value);
@@ -175,6 +189,9 @@ function createField(field) {
     if (field.step !== undefined) control.step = field.step;
   }
 
+  control.required = field.required || false;
+  if (field.placeholder) control.placeholder = field.placeholder;
+  if (field.description) control.title = field.description;
   control.name = field.key;
   control.id = `field-${field.key}`;
   if (field.type === "checkbox") {
@@ -217,7 +234,8 @@ async function loadWidgetModule(widgetId) {
   const entry = manifest[widgetId];
   if (!entry?.js) throw new Error(`组件 ${widgetId} 没有构建入口`);
   await Promise.all((entry.css || []).map(loadStylesheet));
-  return import(/* @vite-ignore */ entry.js);
+  const [component, fields] = await Promise.all([import(/* @vite-ignore */ entry.js), loadWidgetConfig(widgetId)]);
+  return { ...component, fields };
 }
 
 function loadManifest() {
@@ -241,4 +259,18 @@ function loadStylesheet(href) {
     link.addEventListener("error", () => reject(new Error(`组件样式加载失败：${href}`)), { once: true });
     document.head.append(link);
   });
+}
+
+async function loadWidgetConfig(widgetId) {
+  if (!configCache.has(widgetId)) {
+    const pending = loadManifest().then(async (manifest) => {
+      const url = manifest[widgetId]?.config;
+      if (!url) throw new Error(`组件 ${widgetId} 没有配置入口`);
+      const response = await fetch(url, { cache: "no-cache" });
+      if (!response.ok) throw new Error(`配置加载失败：HTTP ${response.status}`);
+      return resolveFields(await response.json(), widgetId);
+    }).catch((error) => { configCache.delete(widgetId); throw error; });
+    configCache.set(widgetId, pending);
+  }
+  return configCache.get(widgetId);
 }

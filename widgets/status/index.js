@@ -1,12 +1,6 @@
 import "../shared.css";
 import "./style.css";
-import { escapeHtml, sharedFields } from "../shared.js";
-
-export const fields = [
-  { key: "title", label: "标题", type: "text", default: "服务状态" },
-  { key: "refresh", label: "刷新间隔（秒）", type: "number", default: "30", min: 5, max: 300, step: 5 },
-  ...sharedFields,
-];
+import { escapeHtml } from "../shared.js";
 
 export function render(root, config) {
   root.innerHTML = `<section class="embed-card status-card" style="--accent:${config.accent}"><p class="embed-label">${escapeHtml(config.title)}</p><div class="status-line"><span class="status-dot"></span><strong>正在检测…</strong></div><p class="status-time"></p></section>`;
