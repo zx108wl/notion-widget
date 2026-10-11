@@ -26,7 +26,12 @@
       "default": "30",
       "min": 5,
       "max": 300,
-      "step": 5
+      "step": 5,
+      "control": {
+        "type": "slider",
+        "showInput": true,
+        "unit": "秒"
+      }
     },
     {
       "key": "width",

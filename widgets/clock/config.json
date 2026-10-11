@@ -118,7 +118,10 @@
           "value": "dark",
           "label": "深色"
         }
-      ]
+      ],
+      "control": {
+        "type": "radio"
+      }
     },
     {
       "key": "accent",

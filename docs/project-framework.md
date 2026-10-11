@@ -12,6 +12,13 @@
 | `src/main.js` | 路由识别、目录展示、参数表单、URL 生成和动态加载 |
 | `src/style.css` | 工作台布局及嵌入页面容器尺寸 |
 | `src/widgets-registry.js` | 受信任插件 ID 注册表 |
+| `src/controls/` | 公共控件动态注册、创建、回退和清理 |
+| `src/control-policy.js` | 控件类型兼容与配置规则 |
+| `src/config-validation.js` | 工作台及嵌入页共用的值校验与 URL 解析 |
+| `src/async-cache.js / src/request-cache.js` | 模块请求合并、配置缓存及订阅取消 |
+| `src/widget-runtime.js` | 插件渲染、更新、过期结果清理和销毁 |
+| `scripts/widget-control-assets.js` | 每个插件的设置控件独立构建与入口改写 |
+| `tests/config-controls.test.js` | 参数校验、缓存取消与生命周期回归测试 |
 | `src/widget-config.js` | 配置校验、动态默认值和元信息提取 |
 | `widgets/{id}/` | 插件源码和配置，具体约定由插件开发文档维护 |
 | `vite.config.js` | 开发清单、开发/预览服务和 API 代理 |
@@ -28,9 +35,10 @@
 ## 2. 加载与配置数据流
 
 1. 启动页面先请求 `/widgets/manifest.json`，取得插件 ID、名称、图标、简介、版本和资源入口。
-2. 根页面渲染目录，选择插件后读取该插件配置，生成参数表单。
-3. 表单变更生成 `/widget/{id}?参数=值` 地址，更新预览 iframe。
-4. 嵌入页从清单定位 JS/CSS 和配置，解析 URL 参数，再调用插件 `render`。
+2. 选择插件后读取并缓存配置，根据字段去重动态加载公共控件或插件自定义设置控件，创建表单实例。
+3. 原始编辑值保存于工作台状态；校验通过后生成 URL，经 250ms 防抖更新预览。已有 iframe 通过同源消息更新参数，不重新导航。
+4. 嵌入页先解析并严格校验 URL；错误页指出值、原因及建议，不加载插件 JS/CSS。合法参数才加载代码并调用 render。
+5. 同源预览 iframe 复用父工作台的清单与原始配置，避免重复请求；外部嵌入页自行读取清单与配置。
 
 开发清单由 Vite 中间件读取注册表与源码配置动态生成，开发 CSS 由 JS 导入注入。生产清单由构建脚本写入。页面内缓存清单、配置和模块，修改配置后需要刷新页面。
 
@@ -46,6 +54,8 @@ dist/
       config.json
       index-[hash].js
       style-[hash].css
+      controls-[hash].js          自定义设置控件
+      controls-[hash].css         按需生成的控件样式
       chunks/                     按需生成
       assets/                     未内联的静态资源
 ```
@@ -72,6 +82,14 @@ dist/
 
 上述哈希仅为示意，实际路径以构建产物为准。发布时同步部署整个 dist，保证清单、配置和资源属于同一次构建。当前使用站点根路径，不支持直接双击 HTML 或无需改造就部署到任意子路径。
 
+### 请求粒度与生命周期
+
+公共设置组件使用动态 import 按 input / slider / select / radio / switch 拆分，文本、数字、颜色和日期共用 input；共享依赖由 Vite 提取。入口只包含注册和加载器，不包含具体控件实现。模块 Promise 合并并发请求并保留成功缓存，失败加载清除缓存。
+
+插件自定义设置控件按插件聚合成单独 controls-[hash].js（及所需 CSS），仅用于设置，不并入插件渲染入口。iframe 参数更新不重新请求静态模块，相同配置消息不重复渲染。
+
+切换插件时 abort 选择作用域、销毁控件实例、卸载旧 iframe，保留配置、代码模块与参数草稿。配置请求按消费者计数，最后一个消费者退出时取消未完成请求，避免旧请求影响新选择。动态 import 无法直接取消，但过期结果不挂载；实例挂载阶段的监听器和请求使用独立 signal。JS 模块只缓存代码，实例生命周期由宿主管理。插件异步 render/update 和销毁由 widget-runtime.js 管理。
+
 ### 外部工作台接入
 
 独立工作台可先读取 `/widgets/manifest.json`，再加载目标插件配置生成表单。若直接取得单个发布配置，按配置 URL 解析入口：
@@ -92,11 +110,11 @@ const styleUrls = definition.entry.css.map(value => new URL(value, configUrl).hr
 - 修改配置协议时同步维护配置校验、参数解析、表单、构建验证和插件开发文档。
 - 修改输出结构时同步维护开发清单、生产清单、资源加载、验证脚本和静态服务规则。
 - 后端运行独立于 Vite；开发与预览通过代理访问 API，生产通过 Nginx 访问 api 容器。
-- 目前没有插件安装服务、权限系统、参数持久化服务、独立 SDK 或销毁钩子，新增这些能力应作为框架变更实现。
+- 目前没有插件安装服务、权限系统、服务端参数持久化服务或独立 SDK，新增这些能力应作为框架变更实现。
 
 ### 当前缓存行为
 
-Nginx 为 `index.html` 和清单设置 no-cache，对 `/widgets/` 其余文件设置一年 immutable 缓存。因此不带哈希的插件 `config.json` 也会命中长期缓存规则；前端 fetch 的 no-cache 不能替代正确的服务端重验证策略。生产配置更新如出现旧内容，应检查该规则；后续缓存策略调整应单独验证。
+Nginx 为 index.html、清单和各插件 config.json 设置 no-cache，以允许重验证。带哈希的工作台、控件和插件资源使用一年 immutable 缓存。页面内复用配置和模块；生产发布后需刷新工作台获取新清单和配置。
 
 ## 5. 本地运行与部署
 

@@ -230,25 +230,28 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 | `options` | array | select 必填 | `{ "value": "值", "label": "名称" }` 数组 |
 | `min` / `max` | number | 否 | 数值上下限，不能写成字符串 |
 | `step` | number | 否 | 大于零的输入步长 |
-| `required` | boolean | 否 | 设置原生控件的必填属性 |
+| `required` | boolean | 否 | 统一必填校验，同时提供给设置控件 |
 | `placeholder` | string | 否 | 输入框占位文字 |
-| `description` | string | 否 | 显示为控件的 `title` 提示 |
+| `description` | string | 否 | 显示为字段说明 |
+| `minLength` / `maxLength` | number | 否 | 文本长度限制，非负整数；maxLength 默认 120 |
+| `pattern` / `patternMessage` | string | 否 | 文本完整匹配正则及失败提示，无需添加 ^ / $ |
+| `control` | object | 否 | 设置组件的表现形式；不重复定义参数限制 |
 | `defaultValue` | object | 否 | 日期字段的动态默认值，见下文 |
 
-同一配置中 `key` 不能重复。字段顺序就是工作台表单顺序。未定义在 `fields` 中的 URL 参数不会传入 `render`。
+同一配置中 `key` 不能重复。字段顺序就是工作台表单顺序。未定义的 URL 参数会显示错误及支持的参数列表；同名 URL 参数重复也报错。
 
-当前 `required`、`step` 属于控件约束；工作台在输入事件中更新预览，没有提交前校验流程，URL 解析也不会按 `step` 对齐。插件如有更严格的业务要求，应在渲染时校验。
+类型、默认值和限制只定义在参数上。工作台与嵌入页复用 src/config-validation.js；控件只读取这些规则。工作台允许保留编辑中的无效值，并显示字段错误，全部参数有效后才更新 URL 和预览。嵌入页先校验，再加载插件 JS/CSS；任何错误都显示具体参数、收到的值、原因和建议，不截断、不夹取数值，也不悄悄替换成默认值。默认值只用于缺失的 URL 参数。
 
 ### 4.2 支持的类型与 URL 解析行为
 
 | 类型 | 默认值示例 | 工作台控件 | 嵌入页处理 |
 | --- | --- | --- | --- |
-| `text` | `"你好"` | 单行文本框 | URL 值最多保留 120 个字符 |
-| `number` | `"30"` 或 `""` | 数字输入框 | 非有限数值回退默认值；按 min/max 限制范围；结果仍是字符串 |
-| `select` | `"auto"` | 单选下拉框 | 值不在 options 中则回退默认值 |
-| `checkbox` | `"1"` / `"0"` | 开关 | URL 中只有 `1` 表示开启，其余值表示关闭 |
-| `color` | `"#6c5ce7"` | 颜色选择器 | 仅接受六位十六进制颜色，不合法时回退默认值 |
-| `datetime-local` | `"2026-10-17T12:30"` | 本地日期时间输入框 | 当前仅截断长度，不校验日期合法性；插件需自行处理 |
+| `text` | `"你好"` | 单行文本框 | 校验长度、必填和正则；超限报错，默认最多 120 个字符 |
+| `number` | `"30"` 或 `""` | 数字输入框 | 校验有效数值、min/max/step；错误直接显示；结果仍是字符串 |
+| `select` | `"auto"` | 单选下拉框 | 值必须属于 options，否则报错 |
+| `checkbox` | `"1"` / `"0"` | 开关 | 只接受 1 / 0，其余值报错 |
+| `color` | `"#6c5ce7"` | 颜色选择器 | 只接受六位十六进制颜色，否则报错 |
+| `datetime-local` | `"2026-10-17T12:30"` | 本地日期时间输入框 | 校验真实本地日期时间；格式或日期无效时报错 |
 
 `select` 的选项值和名称必须是字符串，选项值不能重复，默认值必须匹配其中一个选项。`checkbox` 不使用布尔值作为默认值。
 
@@ -281,7 +284,69 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 
 当前只支持 `relative-date`，仅用于 `datetime-local`。`days` 为有限数值，绝对值不超过 36500，建议使用整数。默认日期按浏览器本地时间加日历天数，秒和毫秒归零；不会执行 JSON 中的函数或脚本。
 
-动态默认值在页面加载配置时计算，页面内缓存。等于默认值的参数不会写入生成的 URL，因此未显式指定目标日期的倒计时，在重新打开页面时会再次以当时日期计算。需要固定日期时，应选定与默认值不同的日期，或明确在 URL 中传入 `target`。
+动态默认日期在配置加载时计算。工作台总会把此类字段的当前值写入生成 URL，以保证复制后的目标日期固定。手工访问不含 target 的 URL 时，则按打开页面的日期计算默认值。日期字段若业务上不可为空，应设置 required: true；动态默认字段仍需保留 default 字符串。
+
+### 4.5 设置控件（control）
+
+参数的 type 决定值语义，control.type 决定编辑形式。不填 control 时兼容原有默认控件。
+
+| control.type | 兼容参数类型 | 加载方式 |
+| --- | --- | --- |
+| input | text / number / color / datetime-local | 使用时动态加载 input 模块 |
+| slider | number | 动态加载 slider；showInput 为 true 时复用 input 模块 |
+| select | select | 动态加载下拉控件 |
+| radio | select | 动态加载单选按钮组 |
+| switch | checkbox | 动态加载开关 |
+| custom | 当前支持的任意参数类型 | 动态加载插件自定义模块，仍走统一参数校验 |
+
+滑块与输入框共用参数限制：
+
+```json
+{
+  "key": "refresh", "label": "刷新间隔", "type": "number", "default": "30",
+  "min": 5, "max": 300, "step": 5,
+  "control": { "type": "slider", "showInput": true, "unit": "秒" }
+}
+```
+
+slider 必须提供有限且不同的 min/max。step 的基准为 min，未设置 min 时为 0。未设置 step 则不限制步长。数字默认值为空且非必填时允许留空（例如宽高）；其他数字字段清空会显示错误。min/max/step 只用于 number，长度与正则只用于 text。控制对象不允许重复放 min/max/step、required、options、长度或正则约束。
+
+自定义设置控件：
+
+```json
+{
+  "key": "title", "label": "标题", "type": "text", "default": "你好", "maxLength": 80,
+  "control": {
+    "type": "custom",
+    "entry": "./controls/title-input.js",
+    "props": { "showCount": true }
+  }
+}
+```
+
+entry 使用插件目录内的相对 JS 路径。模块默认导出命名函数 mount；若模块提供多个控件，可导出对象，例如 export const compact = { mount }，配置中设置 control.export 为 compact。control.props 是额外显示或交互配置对象。可选 control.css 为相对 CSS 路径数组；也可从控件 JS 导入 CSS。构建时将同一插件的自定义控件聚合为独立 controls-[hash].js，自动改写 entry、export 和 css，插件渲染 JS 不包含这些设置组件。
+
+完整控件接口：
+
+```js
+export function mount(root, { field, value, props, onChange, signal }) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "field-" + field.key;
+  input.value = value;
+  if (field.maxLength !== undefined) input.maxLength = field.maxLength;
+  input.addEventListener("input", () => onChange(input.value), { signal });
+  root.append(input);
+  return {
+    setValue(nextValue) { input.value = nextValue; },
+    destroy() { root.replaceChildren(); }
+  };
+}
+```
+
+mount 可返回 Promise；必须最终返回 setValue 和 destroy。onChange 接收字符串原始编辑值，工作台负责校验与状态管理；setValue 是宿主向控件同步值的入口，应避免调用 onChange 形成反馈循环。不要依赖 FormData 或原生 input name 来保存值。监听器和 fetch 使用 signal，定时器等在 destroy 中清理；异步过程中检查 signal.aborted，避免继续操作已销毁的 DOM。
+
+切换插件时先取消请求、abort 控件作用域，再 destroy 已挂载实例。过期的异步结果不会继续挂载，迟到的实例会立即销毁。成功模块和配置保留页面缓存；相同控件的并发加载合并。加载失败会显示提示并回退字段默认控件，失败请求允许重试。旧控件实例不会复用，切换回插件时重新创建实例，但保留页面内参数草稿。
 
 ## 5. JavaScript 接口与生命周期
 
@@ -306,7 +371,25 @@ if (!Number.isFinite(target.getTime())) {
 
 模块只导出 `render` 即可，不需要导出 `fields`。避免在模块顶层访问 `document`、创建定时器或发起请求：构建检查会在 Node.js 中导入产物，顶层依赖浏览器对象会导致验证失败。DOM 操作放入 `render`，查询尽量限定在 `root` 内。
 
-当前加载器直接调用 `render`，不等待它返回的 Promise，也不处理返回的销毁函数。异步操作需要自行捕获错误；没有 `mount/update/unmount` 钩子。工作台修改参数会重新加载预览 iframe，而不是向同一个实例发送更新。
+加载器等待 render 的返回值。纯静态插件可以不返回；有资源的插件应返回销毁函数或包含 destroy 的对象。可选对象 update 用于复用实例；缺少 update 时，参数变化先 abort 和 destroy 旧实例，再重新 render。工作台有效输入经 250ms 防抖后通过同源 postMessage 更新预览，不重载 iframe；切换插件才卸载 iframe。
+
+```js
+export function render(root, config, { signal }) {
+  const title = document.createElement("h1");
+  root.replaceChildren(title);
+  const apply = next => { title.textContent = next.title; };
+  apply(config);
+  // fetch(url, { signal }) 会在实例退出时取消。
+  return {
+    update(nextConfig, { signal: updateSignal, lifetimeSignal }) {
+      if (!updateSignal.aborted && !lifetimeSignal.aborted) apply(nextConfig);
+    },
+    destroy() { root.replaceChildren(); }
+  };
+}
+```
+
+render 的 signal 表示实例存活期。异步 update 串行执行，新的更新会取消上一更新的 signal 并跳过过期的排队更新；异步更新应遵守 signal，执行 DOM 修改前检查是否已取消。destroy 也应清理未绑定到 signal 的事件、定时器和订阅。挂载失败会取消该作用域；异步渲染完成时若已过期，会立即清理返回实例。
 
 使用用户输入时，优先赋给 `textContent`；拼接 HTML 时使用 `escapeHtml`。定时器和监听器可在 `pagehide` 中清理：
 
@@ -401,7 +484,7 @@ loadStatus();
 npm run check
 ```
 
-该命令先验证图标协议、资源发布和渲染回退，再检查后端语法，构建工作台与每个插件，并验证配置、元信息、资源路径、JS 的 `render` 导出、尺寸字段及 CSS 产物。
+该命令验证图标、严格参数校验、请求缓存与控件/插件生命周期，再检查后端语法，构建工作台与每个插件，并验证配置、元信息、资源路径、JS 的 `render` 导出、尺寸字段及 CSS 产物。
 
 只构建可执行 `npm run build`，本地检查发布产物可执行 `npm run preview`，访问 `http://127.0.0.1:4173`。涉及 API 的插件还需要运行后端，例如在另一个终端执行 `npm run dev:api`。
 
@@ -415,6 +498,8 @@ dist/
       config.json                 发布配置
       index-[hash].js
       style-[hash].css
+      controls-[hash].js          按需生成的自定义设置组件
+      controls-[hash].css         按需生成的设置组件样式
       chunks/                     按需生成的 JS 分块
       assets/                     未内联的静态资源
 ```
@@ -432,9 +517,9 @@ dist/
 | 选项修改后仍未更新 | 页面内缓存了清单和配置，刷新页面；生产环境重新构建并部署 |
 | 有配置但样式未打包 | JS 是否 import 了 CSS；entry.css 本身不会引入样式 |
 | 图片、字体返回 404 | 是否通过 import / CSS url 引用，是否硬编码了未带哈希文件名 |
-| 定时器或请求出错却没有显示加载错误 | 异步回调需插件自行捕获；加载器只处理加载阶段和同步渲染错误 |
+| 定时器或请求出错却没有显示加载错误 | 异步回调需插件自行捕获；加载器处理加载及 await render/update 错误，后续定时器或独立请求需自行捕获 |
 | 数字字段在插件中计算异常 | config 值是字符串，应先 Number 转换 |
-| 倒计时目标时间无效 | datetime-local 的 URL 值需要插件自行校验 |
+| 倒计时目标时间无效 | 检查错误页给出的真实日期与格式要求 |
 | Node 构建检查提示 document 未定义 | 把顶层 DOM 操作移到 render 内 |
 | API 请求失败 | 后端是否启动，路径是否为 /api，服务端环境变量是否正确 |
 
@@ -446,3 +531,4 @@ dist/
 4. CSS 从 JS 导入，静态资源通过可构建的引用加载。
 5. 工作台选项、生成 URL、iframe 预览、深浅主题和不同尺寸表现正常。
 6. `npm run check` 通过，再用发布产物预览验证。
+7. 如有自定义控件，验证加载失败回退、切换销毁和模块复用；无效 URL 必须阻止插件资源加载。

@@ -2,7 +2,11 @@ import "../shared.css";
 import "./style.css";
 import { escapeHtml } from "../shared.js";
 
-export function render(root, config) {
+export function render(root, config, { signal } = {}) {
+  const timers = [];
+  const repeat = (callback, delay) => timers.push(setInterval(callback, delay));
+  const cleanup = () => timers.forEach(clearInterval);
+  signal?.addEventListener("abort", cleanup, { once: true });
   root.innerHTML = `<section class="embed-card countdown-card" style="--accent:${config.accent}"><p class="embed-label">${escapeHtml(config.title)}</p><div class="countdown-grid">${["天", "小时", "分钟", "秒"].map((unit, index) => `<div><strong data-part="${index}">--</strong><span>${unit}</span></div>`).join("")}</div><p class="completed-message" hidden>${escapeHtml(config.completed)}</p></section>`;
   const parts = [...root.querySelectorAll("[data-part]")];
   const message = root.querySelector(".completed-message");
@@ -14,5 +18,6 @@ export function render(root, config) {
     message.hidden = remaining > 0;
   };
   update();
-  setInterval(update, 1000);
+  repeat(update, 1000);
+  return { destroy() { cleanup(); signal?.removeEventListener("abort", cleanup); } };
 }

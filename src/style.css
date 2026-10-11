@@ -81,3 +81,18 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .widget-icon img { display: block; width: 24px; height: 24px; object-fit: contain; }
+
+.field-error { color: #c33e35; }
+.control-warning { color: #9b6500; }
+.field-error:empty, .control-warning:empty { display: none; }
+.slider-control { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.slider-control > div { grid-column: 1 / -1; }
+.control-host[role="radiogroup"] { display: flex; flex-wrap: wrap; gap: 12px; }
+.control-host[role="radiogroup"] label { display: flex; gap: 6px; align-items: center; }
+.control-host input[type="range"] { padding: 0; }
+.parameter-error-page { width: auto; height: auto; min-height: 100vh; overflow: auto; padding: 20px; }
+.parameter-errors { padding-left: 20px; overflow-wrap: anywhere; }
+.parameter-errors li { margin: 12px 0; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+
+.control-host input[type="radio"] { width: 16px; height: 16px; padding: 0; }

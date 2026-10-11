@@ -37,6 +37,20 @@ for (const widgetId of registeredIds) {
     if (!iconUrl.startsWith(prefix + "assets/")) throw new Error("图标不在插件资源目录内: " + widgetId);
     await access(path.join(dist, iconUrl.slice(1)));
   }
+  const controlEntries = new Map();
+  for (const field of fields.filter(field => field.control?.type === "custom")) {
+    const href = new URL(field.control.entry, `https://widget.invalid${entry.config}`).pathname;
+    if (!href.startsWith(prefix) || href.includes("..")) throw new Error("Custom control path is outside widget directory");
+    if (!controlEntries.has(href)) controlEntries.set(href, await import(pathToFileURL(path.join(dist, href.slice(1))).href));
+    const controlModule = controlEntries.get(href);
+    const selected = field.control.export ? controlModule[field.control.export] : controlModule;
+    if (typeof selected?.mount !== "function") throw new Error("Custom control missing mount: " + field.key);
+    for (const url of field.control.css || []) {
+      const cssHref = new URL(url, `https://widget.invalid${entry.config}`).pathname;
+      if (!cssHref.startsWith(prefix)) throw new Error("Custom control CSS path is outside widget directory");
+      await access(path.join(dist, cssHref.slice(1)));
+    }
+  }
   if (typeof module.render !== "function") throw new Error(`组件 ${widgetId} 未导出 render`);
   for (const dimension of ["width", "height"]) {
     const field = fields.find(({ key }) => key === dimension);

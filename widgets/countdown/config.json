@@ -17,7 +17,12 @@
       "key": "title",
       "label": "事件名称",
       "type": "text",
-      "default": "距离目标还有"
+      "default": "距离目标还有",
+      "maxLength": 80,
+      "control": {
+        "type": "custom",
+        "entry": "./controls/title-input.js"
+      }
     },
     {
       "key": "target",
@@ -27,7 +32,8 @@
       "defaultValue": {
         "kind": "relative-date",
         "days": 7
-      }
+      },
+      "required": true
     },
     {
       "key": "completed",

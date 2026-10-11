@@ -2,7 +2,11 @@ import "../shared.css";
 import "./style.css";
 import { escapeHtml } from "../shared.js";
 
-export function render(root, config) {
+export function render(root, config, { signal } = {}) {
+  const timers = [];
+  const repeat = (callback, delay) => timers.push(setInterval(callback, delay));
+  const cleanup = () => timers.forEach(clearInterval);
+  signal?.addEventListener("abort", cleanup, { once: true });
   root.innerHTML = `<section class="embed-card clock-card" style="--accent:${config.accent}">
     <div class="clock-main"><p class="embed-label">${escapeHtml(config.title)}</p><time class="clock-time"></time><p class="clock-date"></p></div>
     <aside class="clock-weather" aria-live="polite">
@@ -19,20 +23,22 @@ export function render(root, config) {
     date.textContent = now.toLocaleDateString("zh-CN", { timeZone: config.timezone, year: "numeric", month: "long", day: "numeric", weekday: "long" });
   };
   update();
-  setInterval(update, config.seconds === "1" ? 1000 : 30_000);
+  repeat(update, config.seconds === "1" ? 1000 : 30_000);
 
   const weather = root.querySelector(".clock-weather");
   const updateWeather = async () => {
     try {
       const params = new URLSearchParams({ latitude: config.latitude, longitude: config.longitude });
-      const response = await fetch(`/api/weather?${params}`);
+      const response = await fetch(`/api/weather?${params}`, { signal });
       const data = await response.json();
+      if (signal?.aborted) return;
       if (!response.ok) throw new Error(data.error || "天气请求失败");
       const details = describeWeather(data.weatherCode, data.isDay);
       weather.querySelector(".weather-icon").textContent = details.icon;
       weather.querySelector(".weather-temperature").textContent = `${Math.round(data.temperature)}${data.unit}`;
       weather.querySelector(".weather-condition").textContent = details.label;
     } catch (error) {
+      if (signal?.aborted) return;
       console.error(error);
       weather.querySelector(".weather-icon").textContent = "—";
       weather.querySelector(".weather-temperature").textContent = "--°";
@@ -40,7 +46,8 @@ export function render(root, config) {
     }
   };
   updateWeather();
-  setInterval(updateWeather, 15 * 60_000);
+  repeat(updateWeather, 15 * 60_000);
+  return { destroy() { cleanup(); signal?.removeEventListener("abort", cleanup); } };
 }
 
 function describeWeather(code, isDay) {

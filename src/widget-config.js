@@ -1,3 +1,5 @@
+import { validateControl } from "./control-policy.js";
+import { validateValue } from "./config-validation.js";
 const types = new Set(["text", "number", "select", "checkbox", "color", "datetime-local"]);
 
 export function validateConfig(config, widgetId) {
@@ -15,6 +17,14 @@ export function validateConfig(config, widgetId) {
       throw new Error("Invalid or duplicate config field: " + field?.key);
     }
     keys.add(field.key);
+    validateControl(field);
+    for (const key of ["min", "max", "step"]) if (field[key] !== undefined && field.type !== "number") throw new Error("Numeric constraint on non-number field: " + field.key);
+    for (const key of ["minLength", "maxLength", "pattern", "patternMessage"]) if (field[key] !== undefined && field.type !== "text") throw new Error("Text constraint on non-text field: " + field.key);
+    if (field.patternMessage !== undefined && typeof field.patternMessage !== "string") throw new Error("Invalid pattern message: " + field.key);
+    for (const key of ["minLength", "maxLength"]) if (field[key] !== undefined && (!Number.isInteger(field[key]) || field[key] < 0)) throw new Error("Invalid length constraint: " + field.key);
+    if ((field.minLength ?? 0) > (field.maxLength ?? 120)) throw new Error("Invalid length range: " + field.key);
+    if (field.required !== undefined && typeof field.required !== "boolean") throw new Error("Invalid required flag: " + field.key);
+    if (field.pattern !== undefined) { if (typeof field.pattern !== "string") throw new Error("Invalid pattern: " + field.key); new RegExp("^(?:" + field.pattern + ")$", "u"); }
     if (field.type === "select" && (!Array.isArray(field.options) || !field.options.length || field.options.some(o => typeof o?.value !== "string" || typeof o.label !== "string") || new Set(field.options.map(o => o.value)).size !== field.options.length || !field.options.some(o => o.value === field.default))) {
       throw new Error("Invalid select options: " + field.key);
     }
@@ -25,7 +35,10 @@ export function validateConfig(config, widgetId) {
     if (field.type === "number" && field.default !== "" && (!Number.isFinite(Number(field.default)) || Number(field.default) < (field.min ?? -Infinity) || Number(field.default) > (field.max ?? Infinity))) throw new Error("Invalid number default: " + field.key);
     if (field.type === "checkbox" && !["0", "1"].includes(field.default)) throw new Error("Invalid checkbox default: " + field.key);
     if (field.type === "color" && !/^#[0-9a-f]{6}$/i.test(field.default)) throw new Error("Invalid color default: " + field.key);
-    if (field.defaultValue && (field.type !== "datetime-local" || field.defaultValue.kind !== "relative-date" || !Number.isFinite(field.defaultValue.days) || Math.abs(field.defaultValue.days) > 36500)) throw new Error("Invalid dynamic default: " + field.key);
+    if (field.defaultValue !== undefined && (!field.defaultValue || field.type !== "datetime-local" || field.defaultValue.kind !== "relative-date" || !Number.isFinite(field.defaultValue.days) || Math.abs(field.defaultValue.days) > 36500)) throw new Error("Invalid dynamic default: " + field.key);
+  }
+  for (const field of config.fields) {
+    if (!field.defaultValue && validateValue(field, field.default)) throw new Error("Invalid default value: " + field.key);
   }
   return config;
 }
