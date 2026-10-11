@@ -89,7 +89,7 @@ export function App() {
   }
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout style={{ height: "100vh" }}>
       <Header style={{ display: "flex", alignItems: "center", gap: 16, background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           <span style={{ background: "#000", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
@@ -97,54 +97,56 @@ export function App() {
         </Typography.Title>
         <Typography.Text type="secondary">选择组件，生成可嵌入的专属 URL</Typography.Text>
       </Header>
-      <Layout>
-        <Sider width={260} style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", padding: "20px 12px" }}>
+      <Layout style={{ overflow: "hidden" }}>
+        <Sider width={260} style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", padding: "20px 12px", overflowY: "auto" }}>
           <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
             组件库
           </Typography.Text>
           <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} />
         </Sider>
-        <Content style={{ padding: 24 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 440px) minmax(420px, 1fr)", gap: 24, alignItems: "start" }}>
-            <div style={{ background: "#fff", borderRadius: 18, padding: 24, border: "1px solid #f0f0f0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-                <div>
-                  <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                    CONFIGURE
-                  </Typography.Text>
-                  <Typography.Title level={3} style={{ margin: "4px 0 0" }}>
-                    {selectedWidget?.name || "选择组件"}
-                  </Typography.Title>
-                  {selectedWidget && (
-                    <Typography.Paragraph type="secondary" style={{ marginTop: 4 }}>
-                      {selectedWidget.description}
-                    </Typography.Paragraph>
-                  )}
-                </div>
+        <Content style={{ padding: 24, overflow: "auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <Typography.Title level={4} style={{ margin: 0 }}>
+                  {selectedWidget?.name || "选择组件"}
+                </Typography.Title>
                 {selectedWidget && (
-                  <Typography.Text code>/widget/{selectedWidget.id}</Typography.Text>
+                  <Typography.Paragraph type="secondary" style={{ marginTop: 4, marginBottom: 0 }}>
+                    {selectedWidget.description}
+                  </Typography.Paragraph>
                 )}
               </div>
-              {loadingFields ? (
-                <Spin />
-              ) : (
-                <ConfigForm
-                  fields={fields}
-                  values={values}
-                  onChange={handleValuesChange}
-                  widgetBase={
-                    selectedWidget
-                      ? new URL(".", new URL(selectedWidget.config, window.location.origin)).href
-                      : undefined
-                  }
-                />
+              {selectedWidget && (
+                <Typography.Text code>/widget/{selectedWidget.id}</Typography.Text>
               )}
             </div>
-            <div style={{ background: "#fff", borderRadius: 18, padding: 20, border: "1px solid #f0f0f0", position: "sticky", top: 24 }}>
+            <div style={{ flex: 1, minHeight: 0, background: "#fff", borderRadius: 18, padding: 20, border: "1px solid #f0f0f0" }}>
               <PreviewPanel widgetId={selectedId} fields={fields} values={values} />
             </div>
           </div>
         </Content>
+        <Sider width={400} style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", padding: "20px 12px", overflowY: "auto" }}>
+          <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
+            配置面板
+          </Typography.Text>
+          <div style={{ padding: "12px 12px 0" }}>
+            {loadingFields ? (
+              <Spin />
+            ) : (
+              <ConfigForm
+                fields={fields}
+                values={values}
+                onChange={handleValuesChange}
+                widgetBase={
+                  selectedWidget
+                    ? new URL(".", new URL(selectedWidget.config, window.location.origin)).href
+                    : undefined
+                }
+              />
+            )}
+          </div>
+        </Sider>
       </Layout>
     </Layout>
   );

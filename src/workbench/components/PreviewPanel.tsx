@@ -171,9 +171,11 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
   }, [fitScale]);
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>实时预览</Typography.Title>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Typography.Title level={4} style={{ margin: 0 }}>实时预览</Typography.Title>
+        </div>
         <Button onClick={handleOpen} disabled={!url}>新窗口打开</Button>
       </div>
 
@@ -232,8 +234,8 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         ref={stageRef}
         style={{
           position: "relative",
-          minHeight: 420,
-          maxHeight: "70vh",
+          flex: 1,
+          minHeight: 280,
           overflow: "auto",
           background: "linear-gradient(135deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%)",
           backgroundSize: "20px 20px",
