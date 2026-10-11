@@ -6,7 +6,7 @@ interface CustomControlModule {
   default?: ComponentType<ControlProps>;
 }
 
-export function CustomControl({ field, value, onChange }: ControlProps) {
+export function CustomControl({ field, value, onChange, widgetBase }: ControlProps) {
   const [Component, setComponent] = useState<ComponentType<ControlProps> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +15,11 @@ export function CustomControl({ field, value, onChange }: ControlProps) {
     const control = field.control as { entry: string } | undefined;
     if (!control?.entry) return;
 
-    import(/* @vite-ignore */ control.entry)
+    const entryUrl = widgetBase
+      ? new URL(control.entry, widgetBase).href
+      : control.entry;
+
+    import(/* @vite-ignore */ entryUrl)
       .then((mod: CustomControlModule) => {
         if (cancelled) return;
         if (mod.default) {
@@ -31,7 +35,7 @@ export function CustomControl({ field, value, onChange }: ControlProps) {
     return () => {
       cancelled = true;
     };
-  }, [field]);
+  }, [field, widgetBase]);
 
   if (error) return <span style={{ color: "#9b6500", fontSize: 12 }}>{error}</span>;
   if (!Component) return null;

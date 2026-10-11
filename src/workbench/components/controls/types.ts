@@ -5,6 +5,7 @@ export interface ControlProps {
   field: Field;
   value: string;
   onChange: (value: string) => void;
+  widgetBase?: string;
 }
 
 export function defaultControlType(field: Field): NonNullable<Control["type"]> {

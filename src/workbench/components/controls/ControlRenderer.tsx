@@ -19,11 +19,11 @@ const controlMap: Record<ControlType, ComponentType<ControlProps>> = {
   custom: CustomControl,
 };
 
-export function ControlRenderer({ field, value, onChange }: ControlProps) {
+export function ControlRenderer({ field, value, onChange, widgetBase }: ControlProps) {
   const type = field.control?.type ?? defaultControlType(field);
   const Component = controlMap[type];
   if (!Component) return null;
-  return <Component field={field} value={value} onChange={onChange} />;
+  return <Component field={field} value={value} onChange={onChange} widgetBase={widgetBase} />;
 }
 
 export type { Field };

@@ -128,7 +128,16 @@ export function App() {
               {loadingFields ? (
                 <Spin />
               ) : (
-                <ConfigForm fields={fields} values={values} onChange={handleValuesChange} />
+                <ConfigForm
+                  fields={fields}
+                  values={values}
+                  onChange={handleValuesChange}
+                  widgetBase={
+                    selectedWidget
+                      ? new URL(".", new URL(selectedWidget.config, window.location.origin)).href
+                      : undefined
+                  }
+                />
               )}
             </div>
             <div style={{ background: "#fff", borderRadius: 18, padding: 20, border: "1px solid #f0f0f0", position: "sticky", top: 24 }}>

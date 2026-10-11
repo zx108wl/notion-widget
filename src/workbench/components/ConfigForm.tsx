@@ -7,9 +7,10 @@ interface ConfigFormProps {
   fields: Field[];
   values: Record<string, string>;
   onChange: (values: Record<string, string>) => void;
+  widgetBase?: string;
 }
 
-export function ConfigForm({ fields, values, onChange }: ConfigFormProps) {
+export function ConfigForm({ fields, values, onChange, widgetBase }: ConfigFormProps) {
   const handleChange = (key: string, value: string) => {
     onChange({ ...values, [key]: value });
   };
@@ -30,6 +31,7 @@ export function ConfigForm({ fields, values, onChange }: ConfigFormProps) {
               field={field}
               value={values[field.key] ?? field.default}
               onChange={(v) => handleChange(field.key, v)}
+              widgetBase={widgetBase}
             />
           </Form.Item>
         );
