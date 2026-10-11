@@ -209,12 +209,6 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>实时预览</Typography.Title>
-        </div>
-        <Button onClick={handleOpen} disabled={!url}>新窗口打开</Button>
-      </div>
 
       {/* 设备尺寸工具栏 */}
       <div
@@ -278,6 +272,9 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         ))}
         <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => setSaveModalOpen(true)}>
           保存预设
+        </Button>
+        <Button size="small" onClick={handleOpen} disabled={!url}>
+          新窗口打开
         </Button>
       </div>
 

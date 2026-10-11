@@ -41,11 +41,14 @@ function WidgetIcon({ icon }: { icon: WidgetMeta["icon"] }) {
     <span
       ref={ref}
       style={{
-        width: 18,
-        height: 18,
+        width: 24,
+        height: 24,
         display: "grid",
         placeItems: "center",
+        borderRadius: 8,
+        background: "var(--bg-icon)",
         fontSize: 14,
+        lineHeight: 1,
         flexShrink: 0,
       }}
     />
