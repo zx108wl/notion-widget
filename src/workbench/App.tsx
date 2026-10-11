@@ -176,8 +176,8 @@ export function App() {
                 justifyContent: "flex-start",
                 paddingTop: 16,
                 cursor: "pointer",
-                background: rightCollapsed ? "#f0f0f0" : "#fff",
-                borderRight: rightCollapsed ? "none" : "3px solid #6c5ce7",
+                background: rightCollapsed ? "#f0f0f0" : "#6c5ce7",
+                borderRight: rightCollapsed ? "none" : "3px solid #5a4bd1",
                 borderLeft: rightCollapsed ? "3px solid transparent" : "none",
                 transition: "background 0.2s",
               }}
@@ -189,7 +189,7 @@ export function App() {
                   fontSize: 13,
                   fontWeight: rightCollapsed ? 500 : 600,
                   letterSpacing: "0.3em",
-                  color: rightCollapsed ? "#8c8c8c" : "#6c5ce7",
+                  color: rightCollapsed ? "#8c8c8c" : "#fff",
                   userSelect: "none",
                 }}
               >
