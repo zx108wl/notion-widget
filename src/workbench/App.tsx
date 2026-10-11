@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Layout, Segmented, Spin, Typography } from "antd";
-import { DesktopOutlined, LeftOutlined, MoonOutlined, RightOutlined, SunOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, DesktopOutlined, LeftOutlined, MoonOutlined, SunOutlined } from "@ant-design/icons";
+import { Tooltip } from "antd";
 import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
 import { PreviewPanel } from "./components/PreviewPanel.js";
@@ -127,22 +128,34 @@ export function App({
           <div
             style={{
               display: "flex",
+              flexDirection: leftCollapsed ? "column" : "row",
               alignItems: "center",
+              gap: 4,
               justifyContent: leftCollapsed ? "center" : "space-between",
-              padding: leftCollapsed ? "16px 8px" : "20px 12px 12px",
+              padding: leftCollapsed ? "12px 8px" : "20px 12px 12px",
             }}
           >
-            {!leftCollapsed && (
-              <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                组件库
-              </Typography.Text>
+            {leftCollapsed ? (
+              <Tooltip title="展开组件库" placement="right">
+                <Button
+                  type="text"
+                  icon={<AppstoreOutlined style={{ color: "var(--accent)" }} />}
+                  onClick={() => setLeftCollapsed(false)}
+                />
+              </Tooltip>
+            ) : (
+              <>
+                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                  组件库
+                </Typography.Text>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<LeftOutlined />}
+                  onClick={() => setLeftCollapsed(true)}
+                />
+              </>
             )}
-            <Button
-              type="text"
-              size="small"
-              icon={leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
-              onClick={() => setLeftCollapsed(!leftCollapsed)}
-            />
           </div>
           <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
         </Sider>
