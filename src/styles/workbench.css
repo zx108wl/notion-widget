@@ -18,3 +18,38 @@ body,
   height: 100%;
   object-fit: contain;
 }
+
+/* 右栏纵向选项卡 */
+.side-tab {
+  flex-shrink: 0;
+  padding: 10px 7px;
+  cursor: pointer;
+  background: transparent;
+  border-left: 3px solid transparent;
+  transition: background 0.2s;
+}
+.side-tab:hover {
+  background: #ece9fb;
+}
+.side-tab.active {
+  background: #fff;
+  border-left-color: #6c5ce7;
+}
+.side-tab-text {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  color: #8c8c8c;
+  user-select: none;
+  transition: color 0.2s;
+}
+.side-tab:hover .side-tab-text,
+.side-tab.active .side-tab-text {
+  color: #6c5ce7;
+}
+.side-tab.active .side-tab-text {
+  font-weight: 600;
+}

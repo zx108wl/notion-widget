@@ -166,30 +166,10 @@ export function App() {
           <div style={{ display: "flex", height: "100%", alignItems: "flex-start" }}>
             {/* 纵向选项卡：始终可见，宽高由竖排文字内容决定 */}
             <div
+              className={"side-tab" + (rightCollapsed ? "" : " active")}
               onClick={() => setRightCollapsed(!rightCollapsed)}
-              style={{
-                flexShrink: 0,
-                padding: "10px 7px",
-                cursor: "pointer",
-                background: rightCollapsed ? "#f0f0f0" : "#6c5ce7",
-                borderRight: rightCollapsed ? "none" : "3px solid #5a4bd1",
-                borderLeft: rightCollapsed ? "3px solid transparent" : "none",
-                transition: "background 0.2s",
-              }}
             >
-              <span
-                style={{
-                  writingMode: "vertical-rl",
-                  textOrientation: "mixed",
-                  fontSize: 12,
-                  fontWeight: rightCollapsed ? 500 : 600,
-                  letterSpacing: "0.25em",
-                  color: rightCollapsed ? "#8c8c8c" : "#fff",
-                  userSelect: "none",
-                }}
-              >
-                配置面板
-              </span>
+              <span className="side-tab-text">配置面板</span>
             </div>
             {/* 面板内容：仅展开时显示 */}
             {!rightCollapsed && (
