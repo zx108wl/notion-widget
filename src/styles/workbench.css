@@ -19,7 +19,7 @@ body,
   object-fit: contain;
 }
 
-/* 右栏选项卡状态栏 */
+/* 右栏选项卡状态栏：仅作背景，不可点击 */
 .side-bar {
   flex-shrink: 0;
   height: 100%;
@@ -34,10 +34,15 @@ body,
   background: transparent;
   border-left-color: transparent;
 }
-/* 选项卡按钮：宽高由竖排文字决定 */
+/* 选项卡按钮：宽高由竖排文字决定，可点击 */
 .side-tab {
   padding: 10px 7px;
   cursor: pointer;
+  background: #fff;
+  transition: background 0.2s;
+}
+.side-bar.collapsed .side-tab {
+  background: transparent;
 }
 .side-tab-text {
   display: inline-block;
