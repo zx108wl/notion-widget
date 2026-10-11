@@ -1,10 +1,16 @@
 :root {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-  /* 选项卡配色变量 */
-  --side-accent: #6c5ce7;      /* 主题强调色 */
-  --side-bar-bg: #fafafa;      /* 状态栏底色（与左侧边栏一致） */
-  --side-tab-bg: #ffffff;      /* 选中按钮底色 */
-  --side-tab-text-idle: #9a97a3; /* 未选中文字 */
+  /* 全局色板 */
+  --accent: #6c5ce7;           /* 主题强调色（与 main.tsx colorPrimary 保持一致） */
+  --bg-page: #ffffff;          /* 页面/面板底色 */
+  --bg-sider: #fafafa;         /* 侧边栏底色 */
+  --border-color: #f0f0f0;     /* 通用边框 */
+  --text-secondary: #8c8c8c;   /* 次要文字 */
+  /* 选项卡配色（引用全局色板） */
+  --side-accent: var(--accent);
+  --side-bar-bg: var(--bg-sider);
+  --side-tab-bg: var(--bg-page);
+  --side-tab-text-idle: #9a97a3;
 }
 * {
   box-sizing: border-box;

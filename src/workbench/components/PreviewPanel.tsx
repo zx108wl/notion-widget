@@ -380,7 +380,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
               height: 14,
               cursor: "nwse-resize",
               zIndex: 11,
-              background: "linear-gradient(135deg, transparent 50%, #6c5ce7 50%)",
+              background: "linear-gradient(135deg, transparent 50%, var(--accent) 50%)",
               borderRadius: "0 0 8px 0",
             }}
           />
