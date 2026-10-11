@@ -12,7 +12,7 @@
   "description": "简洁的数字时钟，支持时区、秒钟和 12 小时制。",
   "version": "0.1.0",
   "entry": {
-    "js": "./index.js",
+    "js": "./index.ts",
     "css": [
       "./style.css"
     ]

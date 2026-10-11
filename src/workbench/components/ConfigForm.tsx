@@ -1,0 +1,39 @@
+import { Form } from "antd";
+import type { Field } from "../../core/schema/field.schema.js";
+import { validateValue } from "../../core/validation/index.js";
+import { ControlRenderer } from "./controls/ControlRenderer.js";
+
+interface ConfigFormProps {
+  fields: Field[];
+  values: Record<string, string>;
+  onChange: (values: Record<string, string>) => void;
+}
+
+export function ConfigForm({ fields, values, onChange }: ConfigFormProps) {
+  const handleChange = (key: string, value: string) => {
+    onChange({ ...values, [key]: value });
+  };
+
+  return (
+    <Form layout="vertical">
+      {fields.map((field) => {
+        const error = validateValue(field, values[field.key]);
+        return (
+          <Form.Item
+            key={field.key}
+            label={field.label}
+            htmlFor={`field-${field.key}`}
+            validateStatus={error ? "error" : undefined}
+            help={error ? `${error.reason}。${error.suggestion}` : field.description}
+          >
+            <ControlRenderer
+              field={field}
+              value={values[field.key] ?? field.default}
+              onChange={(v) => handleChange(field.key, v)}
+            />
+          </Form.Item>
+        );
+      })}
+    </Form>
+  );
+}

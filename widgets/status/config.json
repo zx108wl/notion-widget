@@ -7,7 +7,7 @@
   "description": "展示当前服务连通情况，并按设定频率自动刷新。",
   "version": "0.1.0",
   "entry": {
-    "js": "./index.js",
+    "js": "./index.ts",
     "css": [
       "./style.css"
     ]

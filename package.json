@@ -10,17 +10,30 @@
     "dev": "concurrently -k -n api,web -c yellow,cyan \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "node --watch server/index.js",
     "dev:web": "vite",
-    "build": "node scripts/build.js",
+    "build": "tsx scripts/build.ts",
     "preview": "vite preview",
     "start": "node server/index.js",
-    "check": "node --test tests/*.test.js && node --check server/index.js && node scripts/build.js && node scripts/verify-build.js"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "tsc --noEmit && vitest run && node --check server/index.js && tsx scripts/build.ts && tsx scripts/verify-build.ts"
   },
   "dependencies": {
+    "antd": "^5.22.0",
     "dotenv": "^16.6.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.2.1",
-    "vite": "^7.1.7"
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^7.1.7",
+    "vitest": "^2.1.5"
   }
 }

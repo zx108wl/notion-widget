@@ -7,7 +7,7 @@
   "description": "设置目标时间，实时展示剩余天、小时、分钟和秒。",
   "version": "0.1.0",
   "entry": {
-    "js": "./index.js",
+    "js": "./index.ts",
     "css": [
       "./style.css"
     ]
@@ -21,7 +21,7 @@
       "maxLength": 80,
       "control": {
         "type": "custom",
-        "entry": "./controls/title-input.js"
+        "entry": "./controls/title-input.tsx"
       }
     },
     {
