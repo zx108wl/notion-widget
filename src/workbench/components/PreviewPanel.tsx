@@ -11,9 +11,8 @@ interface PreviewPanelProps {
 
 const PRESETS = [
   { label: "手机", width: 375, height: 667 },
-  { label: "平板", width: 768, height: 1024 },
-  { label: "桌面", width: 1280, height: 800 },
-  { label: "宽屏", width: 1920, height: 1080 },
+  { label: "Notion", width: 700, height: 400 },
+  { label: "宽嵌入", width: 900, height: 500 },
 ];
 
 export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
