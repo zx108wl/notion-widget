@@ -1,16 +1,43 @@
 :root {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-  /* 全局色板 */
-  --accent: #6c5ce7;           /* 主题强调色（与 main.tsx colorPrimary 保持一致） */
-  --bg-page: #ffffff;          /* 页面/面板底色 */
-  --bg-sider: #fafafa;         /* 侧边栏底色 */
-  --border-color: #f0f0f0;     /* 通用边框 */
-  --text-secondary: #8c8c8c;   /* 次要文字 */
-  /* 选项卡配色（引用全局色板） */
+  /* 浅色色板（默认） */
+  --accent: #6c5ce7;                /* 主题强调色（与 main.tsx colorPrimary 保持一致） */
+  --bg-page: #ffffff;               /* 页面/面板底色 */
+  --bg-sider: #fafafa;              /* 侧边栏底色 */
+  --bg-item: #ffffff;               /* 选中项/工具栏底色 */
+  --bg-icon: #f0f0f0;               /* 图标占位底色 */
+  --border-color: #f0f0f0;          /* 弱边框 */
+  --border-strong: #d9d9d9;         /* 强边框 */
+  --text-secondary: #8c8c8c;        /* 次要文字 */
+  --text-faint: #bfbfbf;            /* 最弱文字 */
+  --stage-a: #f0f0f0;               /* 预览棋盘格 A */
+  --stage-b: #e8e8e8;               /* 预览棋盘格 B */
+  --side-tab-border: #e7e2f6;       /* 选项卡描边 */
+  --side-tab-text-idle: #9a97a3;    /* 选项卡未选中文字 */
   --side-accent: var(--accent);
   --side-bar-bg: var(--bg-sider);
-  --side-tab-bg: var(--bg-page);
-  --side-tab-text-idle: #9a97a3;
+  --side-tab-bg: var(--bg-item);
+}
+:root[data-theme="dark"] {
+  --accent: #8b7cf0;
+  --bg-page: #1f1f1f;
+  --bg-sider: #141414;
+  --bg-item: #262626;
+  --bg-icon: #303030;
+  --border-color: #2e2e2e;
+  --border-strong: #424242;
+  --text-secondary: rgba(255, 255, 255, 0.45);
+  --text-faint: rgba(255, 255, 255, 0.35);
+  --stage-a: #1f1f1f;
+  --stage-b: #262626;
+  --side-tab-border: #424242;
+  --side-tab-text-idle: rgba(255, 255, 255, 0.45);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 * {
   box-sizing: border-box;
@@ -20,6 +47,9 @@ body,
 #app {
   margin: 0;
   min-height: 100%;
+}
+body {
+  background: var(--bg-page);
 }
 
 /* widget icon 图片 */
@@ -45,13 +75,13 @@ body,
   padding: 10px 7px;
   cursor: pointer;
   background: var(--side-tab-bg);
-  box-shadow: inset 0 0 0 1px #e7e2f6;
+  box-shadow: inset 0 0 0 1px var(--side-tab-border);
   transition: background 0.2s;
 }
 /* 选中态：强调条画在按钮内缘，高度跟随按钮 */
 .side-bar:not(.collapsed) .side-tab {
   box-shadow:
-    inset 0 0 0 1px #e7e2f6,
+    inset 0 0 0 1px var(--side-tab-border),
     inset 3px 0 0 var(--side-accent);
 }
 .side-tab-text {
@@ -78,5 +108,5 @@ body,
   min-width: 0;
   overflow-y: auto;
   padding: 16px 16px 24px;
-  background: #fff;
+  background: var(--bg-page);
 }

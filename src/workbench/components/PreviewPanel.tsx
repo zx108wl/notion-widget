@@ -224,8 +224,8 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
           gap: 8,
           marginBottom: 12,
           padding: "10px 12px",
-          background: "#fafafa",
-          border: "1px solid #f0f0f0",
+          background: "var(--bg-sider)",
+          border: "1px solid var(--border-color)",
           borderRadius: 10,
           flexWrap: "wrap",
         }}
@@ -252,7 +252,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
             onChange={(e) => setViewHeight(Math.max(1, Number(e.target.value) || 1))}
           />
         </Space.Compact>
-        <span style={{ fontSize: 12, color: "#bfbfbf" }}>px</span>
+        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>px</span>
         <div style={{ flex: 1 }} />
         {presets.map((p) => (
           <Tooltip key={p.label} title={`${p.width} × ${p.height} px`}>
@@ -309,9 +309,9 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
           flex: 1,
           minHeight: 280,
           overflow: "auto",
-          background: "linear-gradient(135deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%)",
+          background: "linear-gradient(135deg, var(--stage-a) 25%, var(--stage-b) 25%, var(--stage-b) 50%, var(--stage-a) 50%, var(--stage-a) 75%, var(--stage-b) 75%)",
           backgroundSize: "20px 20px",
-          border: "1px solid #d9d9d9",
+          border: "1px solid var(--border-strong)",
           borderRadius: 14,
           padding: 20,
           display: "flex",
@@ -327,7 +327,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
             boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
             borderRadius: 8,
             overflow: "hidden",
-            background: "#fff",
+            background: "var(--bg-page)",
           }}
         >
           <iframe

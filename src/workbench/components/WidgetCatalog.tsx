@@ -26,8 +26,8 @@ export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: Widg
               display: "grid",
               placeItems: "center",
               borderRadius: 10,
-              background: selectedId === widget.id ? "#fff" : "transparent",
-              border: selectedId === widget.id ? "1px solid #d9d9d9" : "1px solid transparent",
+              background: selectedId === widget.id ? "var(--bg-item)" : "transparent",
+              border: selectedId === widget.id ? "1px solid var(--border-strong)" : "1px solid transparent",
             }}
           >
             <WidgetIcon icon={widget.icon} />
@@ -46,14 +46,14 @@ export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: Widg
             cursor: "pointer",
             padding: "10px",
             borderRadius: 12,
-            border: selectedId === widget.id ? "1px solid #d9d9d9" : "1px solid transparent",
-            background: selectedId === widget.id ? "#fff" : "transparent",
+            border: selectedId === widget.id ? "1px solid var(--border-strong)" : "1px solid transparent",
+            background: selectedId === widget.id ? "var(--bg-item)" : "transparent",
           }}
         >
           <WidgetIcon icon={widget.icon} />
           <div style={{ marginLeft: 10, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{widget.name}</div>
-            <div style={{ color: "#8c8c8c", fontSize: 12 }}>{widget.summary}</div>
+            <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>{widget.summary}</div>
           </div>
         </List.Item>
       )}
@@ -78,7 +78,7 @@ function WidgetIcon({ icon }: { icon: WidgetMeta["icon"] }) {
         display: "grid",
         placeItems: "center",
         borderRadius: 10,
-        background: "#f0f0f0",
+        background: "var(--bg-icon)",
         fontSize: 18,
         flexShrink: 0,
       }}

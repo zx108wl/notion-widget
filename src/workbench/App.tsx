@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Layout, Spin, Typography } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { Button, Layout, Segmented, Spin, Typography } from "antd";
+import { DesktopOutlined, LeftOutlined, MoonOutlined, RightOutlined, SunOutlined } from "@ant-design/icons";
 import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
 import { PreviewPanel } from "./components/PreviewPanel.js";
@@ -10,10 +10,23 @@ import {
   type WidgetMeta,
 } from "../core/loader.js";
 import type { Field } from "../core/schema/field.schema.js";
+import type { ThemeMode } from "./useTheme.js";
 
 const { Header, Sider, Content } = Layout;
 
-export function App() {
+const THEME_OPTIONS = [
+  { label: "跟随系统", value: "auto", icon: <DesktopOutlined /> },
+  { label: "浅色", value: "light", icon: <SunOutlined /> },
+  { label: "深色", value: "dark", icon: <MoonOutlined /> },
+];
+
+export function App({
+  themeMode,
+  onThemeModeChange,
+}: {
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
+}) {
   const [widgets, setWidgets] = useState<WidgetMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fields, setFields] = useState<Field[]>([]);
@@ -93,12 +106,13 @@ export function App() {
 
   return (
     <Layout style={{ height: "100vh" }}>
-      <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
+      <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-page)", borderBottom: "1px solid var(--border-color)" }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          <span style={{ background: "#000", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
+          <span style={{ background: "var(--accent)", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
           Notion 小组件
         </Typography.Title>
-        <Typography.Text type="secondary">选择组件，生成可嵌入的专属 URL</Typography.Text>
+        <Typography.Text type="secondary" style={{ flex: 1 }}>选择组件，生成可嵌入的专属 URL</Typography.Text>
+        <Segmented options={THEME_OPTIONS} value={themeMode} onChange={(v) => onThemeModeChange(v as ThemeMode)} />
       </Header>
       <Layout style={{ overflow: "hidden" }}>
         <Sider
@@ -108,7 +122,7 @@ export function App() {
           onCollapse={setLeftCollapsed}
           trigger={null}
           collapsedWidth={64}
-          style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", overflowY: "auto" }}
+          style={{ background: "var(--bg-sider)", borderRight: "1px solid var(--border-color)", overflowY: "auto" }}
         >
           <div
             style={{
@@ -149,7 +163,7 @@ export function App() {
                 <Typography.Text code>/widget/{selectedWidget.id}</Typography.Text>
               )}
             </div>
-            <div style={{ flex: 1, minHeight: 0, background: "#fff", borderRadius: 18, padding: 20, border: "1px solid #f0f0f0" }}>
+            <div style={{ flex: 1, minHeight: 0, background: "var(--bg-page)", borderRadius: 18, padding: 20, border: "1px solid var(--border-color)" }}>
               <PreviewPanel widgetId={selectedId} fields={fields} values={values} />
             </div>
           </div>
@@ -161,7 +175,7 @@ export function App() {
           onCollapse={setRightCollapsed}
           trigger={null}
           collapsedWidth={28}
-          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflow: "hidden", position: "relative" }}
+          style={{ background: "var(--bg-sider)", borderLeft: "1px solid var(--border-color)", overflow: "hidden", position: "relative" }}
         >
           <div
             style={{
