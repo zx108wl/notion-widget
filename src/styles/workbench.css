@@ -34,9 +34,6 @@ body,
   background: var(--side-bar-bg);
   transition: background 0.2s;
 }
-.side-bar.collapsed {
-  background: transparent;
-}
 /* 选项卡按钮：宽高由竖排文字决定，可点击 */
 .side-tab {
   padding: 10px 7px;
