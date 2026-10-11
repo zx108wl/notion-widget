@@ -94,24 +94,11 @@ export function App() {
   return (
     <Layout style={{ height: "100vh" }}>
       <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
-        <Button
-          type="text"
-          icon={leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
-          onClick={() => setLeftCollapsed(!leftCollapsed)}
-          style={{ flexShrink: 0 }}
-        />
         <Typography.Title level={4} style={{ margin: 0 }}>
           <span style={{ background: "#000", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
           Notion 小组件
         </Typography.Title>
         <Typography.Text type="secondary">选择组件，生成可嵌入的专属 URL</Typography.Text>
-        <div style={{ flex: 1 }} />
-        <Button
-          type="text"
-          icon={rightCollapsed ? <LeftOutlined /> : <RightOutlined />}
-          onClick={() => setRightCollapsed(!rightCollapsed)}
-          style={{ flexShrink: 0 }}
-        />
       </Header>
       <Layout style={{ overflow: "hidden" }}>
         <Sider
@@ -123,13 +110,26 @@ export function App() {
           collapsedWidth={64}
           style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", overflowY: "auto" }}
         >
-          {!leftCollapsed && (
-            <div style={{ padding: "20px 12px 12px" }}>
-              <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: leftCollapsed ? "center" : "space-between",
+              padding: leftCollapsed ? "16px 8px" : "20px 12px 12px",
+            }}
+          >
+            {!leftCollapsed && (
+              <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
                 组件库
               </Typography.Text>
-            </div>
-          )}
+            )}
+            <Button
+              type="text"
+              size="small"
+              icon={leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
+              onClick={() => setLeftCollapsed(!leftCollapsed)}
+            />
+          </div>
           <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
         </Sider>
         <Content style={{ padding: 24, overflow: "auto" }}>
@@ -160,15 +160,49 @@ export function App() {
           collapsed={rightCollapsed}
           onCollapse={setRightCollapsed}
           trigger={null}
-          collapsedWidth={0}
-          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflowY: "auto" }}
+          collapsedWidth={40}
+          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflowY: "auto", position: "relative" }}
         >
-          {!rightCollapsed && (
+          {rightCollapsed ? (
+            <div
+              onClick={() => setRightCollapsed(false)}
+              style={{
+                position: "sticky",
+                top: 0,
+                height: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                background: "#f0f0f0",
+                borderLeft: "3px solid #6c5ce7",
+              }}
+            >
+              <span
+                style={{
+                  writingMode: "vertical-rl",
+                  textOrientation: "mixed",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  letterSpacing: "0.3em",
+                  color: "#6c5ce7",
+                }}
+              >
+                配置面板
+              </span>
+            </div>
+          ) : (
             <>
-              <div style={{ padding: "20px 12px 12px" }}>
-                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
+              <div style={{ padding: "20px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   配置面板
                 </Typography.Text>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<RightOutlined />}
+                  onClick={() => setRightCollapsed(true)}
+                />
               </div>
               <div style={{ padding: "0 12px" }}>
                 {loadingFields ? (
