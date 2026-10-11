@@ -19,23 +19,25 @@ body,
   object-fit: contain;
 }
 
-/* 右栏纵向选项卡 */
-.side-tab {
+/* 右栏选项卡状态栏 */
+.side-bar {
   flex-shrink: 0;
-  padding: 10px 7px;
-  cursor: pointer;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #ececec;
-  border-left: 3px solid transparent;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ece9fb;
+  border-left: 3px solid #6c5ce7;
   transition: background 0.2s;
 }
-.side-tab:hover {
-  background: #f5f3fd;
+.side-bar.collapsed {
+  background: transparent;
+  border-left-color: transparent;
 }
-.side-tab.active {
-  background: #ece9fb;
-  border-left-color: #6c5ce7;
-  box-shadow: none;
+/* 选项卡按钮：宽高由竖排文字决定 */
+.side-tab {
+  padding: 10px 7px;
+  cursor: pointer;
 }
 .side-tab-text {
   display: inline-block;
@@ -48,10 +50,18 @@ body,
   user-select: none;
   transition: color 0.2s;
 }
-.side-tab:hover .side-tab-text,
-.side-tab.active .side-tab-text {
+.side-tab:hover .side-tab-text {
   color: #6c5ce7;
 }
-.side-tab.active .side-tab-text {
+.side-bar:not(.collapsed) .side-tab-text {
+  color: #6c5ce7;
   font-weight: 600;
+}
+/* 面板内容区 */
+.side-box {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 16px 16px 24px;
+  background: #fff;
 }

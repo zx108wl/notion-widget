@@ -167,20 +167,18 @@ export function App() {
             style={{
               display: "flex",
               height: "100%",
-              alignItems: "flex-start",
               justifyContent: rightCollapsed ? "center" : "flex-start",
             }}
           >
-            {/* 纵向选项卡：始终可见，宽高由竖排文字内容决定 */}
-            <div
-              className={"side-tab" + (rightCollapsed ? "" : " active")}
-              onClick={() => setRightCollapsed(!rightCollapsed)}
-            >
-              <span className="side-tab-text">配置面板</span>
+            {/* 选项卡状态栏：整条竖栏，浅紫底色 */}
+            <div className={"side-bar" + (rightCollapsed ? " collapsed" : "")}>
+              <div className="side-tab" onClick={() => setRightCollapsed(!rightCollapsed)}>
+                <span className="side-tab-text">配置面板</span>
+              </div>
             </div>
-            {/* 面板内容：仅展开时显示 */}
+            {/* 面板内容区 */}
             {!rightCollapsed && (
-              <div style={{ flex: 1, overflowY: "auto", minWidth: 0, padding: "16px 16px 24px" }}>
+              <div className="side-box">
                 {loadingFields ? (
                   <Spin style={{ marginTop: 24 }} />
                 ) : (
