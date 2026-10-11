@@ -160,21 +160,20 @@ export function App() {
           collapsed={rightCollapsed}
           onCollapse={setRightCollapsed}
           trigger={null}
-          collapsedWidth={40}
+          collapsedWidth={28}
           style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflow: "hidden", position: "relative" }}
         >
           <div style={{ display: "flex", height: "100%" }}>
-            {/* 纵向选项卡：始终可见，选中态高亮 */}
+            {/* 纵向选项卡：始终可见，宽度跟随内容自适应 */}
             <div
               onClick={() => setRightCollapsed(!rightCollapsed)}
               style={{
-                width: 40,
                 flexShrink: 0,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                paddingTop: 16,
+                padding: "14px 7px",
                 cursor: "pointer",
                 background: rightCollapsed ? "#f0f0f0" : "#6c5ce7",
                 borderRight: rightCollapsed ? "none" : "3px solid #5a4bd1",
@@ -186,9 +185,9 @@ export function App() {
                 style={{
                   writingMode: "vertical-rl",
                   textOrientation: "mixed",
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: rightCollapsed ? 500 : 600,
-                  letterSpacing: "0.3em",
+                  letterSpacing: "0.25em",
                   color: rightCollapsed ? "#8c8c8c" : "#fff",
                   userSelect: "none",
                 }}
