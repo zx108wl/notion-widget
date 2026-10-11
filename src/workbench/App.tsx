@@ -110,7 +110,7 @@ export function App({
       {/* 左侧导航 Sider（官方 side-menu 模式） */}
       <Sider
         theme="light"
-        width={260}
+        width={220}
         collapsible
         collapsed={leftCollapsed}
         onCollapse={setLeftCollapsed}
@@ -145,8 +145,8 @@ export function App({
       </Sider>
       <Layout style={{ overflow: "hidden" }}>
         <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-page)", borderBottom: "1px solid var(--border-color)" }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            <span style={{ background: "var(--accent)", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
+          <Typography.Title level={5} style={{ margin: 0 }}>
+            <span style={{ background: "var(--accent)", color: "#fff", padding: "2px 8px", borderRadius: 6, marginRight: 8, fontSize: 13 }}>W</span>
             Notion 小组件
           </Typography.Title>
           <Typography.Text type="secondary" style={{ flex: 1 }}>选择组件，生成可嵌入的专属 URL</Typography.Text>
@@ -157,7 +157,7 @@ export function App({
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
-                <Typography.Title level={4} style={{ margin: 0 }}>
+                <Typography.Title level={5} style={{ margin: 0 }}>
                   {selectedWidget?.name || "选择组件"}
                 </Typography.Title>
                 {selectedWidget && (
