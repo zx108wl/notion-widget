@@ -1,4 +1,4 @@
-import { List, Tooltip } from "antd";
+import { Menu } from "antd";
 import type { WidgetMeta } from "../../core/loader.js";
 import { createWidgetIcon } from "../../core/icon.js";
 import { useEffect, useRef } from "react";
@@ -10,94 +10,33 @@ interface WidgetCatalogProps {
   collapsed?: boolean;
 }
 
+/* 左侧导航菜单：展开显示图标+名称+摘要，折叠由 Menu inlineCollapsed 处理（图标+Tooltip） */
 export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: WidgetCatalogProps) {
-  if (collapsed) {
-    return <CollapsedCatalog widgets={widgets} selectedId={selectedId} onSelect={onSelect} />;
-  }
   return (
-    <List
-      dataSource={widgets}
-      renderItem={(widget) => {
-        const active = widget.id === selectedId;
-        return (
-          <List.Item
-            onClick={() => onSelect(widget.id)}
-            style={{
-              cursor: "pointer",
-              padding: "10px",
-              borderRadius: 12,
-              border: active ? "1px solid var(--border-strong)" : "1px solid transparent",
-              background: active ? "var(--bg-item)" : "transparent",
-            }}
-          >
-            <WidgetIcon icon={widget.icon} active={active} />
-            <div style={{ marginLeft: 10, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{widget.name}</div>
-              <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>{widget.summary}</div>
-            </div>
-          </List.Item>
-        );
-      }}
+    <Menu
+      mode="inline"
+      inlineCollapsed={!!collapsed}
+      selectedKeys={selectedId ? [selectedId] : []}
+      onClick={({ key }) => onSelect(key)}
+      style={{ background: "transparent", borderInlineEnd: "none", paddingInline: collapsed ? 0 : 8 }}
+      items={widgets.map((widget) => ({
+        key: widget.id,
+        icon: <WidgetIcon icon={widget.icon} />,
+        label: collapsed ? widget.name : (
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, lineHeight: 1.35 }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{widget.name}</span>
+            <span style={{ color: "var(--text-secondary)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {widget.summary}
+            </span>
+          </div>
+        ),
+        title: widget.name,
+      }))}
     />
   );
 }
 
-/* 折叠态：独立组件，图标 + 右侧浮层名称，选中态用左缘强调条（与右栏选项卡语言一致） */
-function CollapsedCatalog({
-  widgets,
-  selectedId,
-  onSelect,
-}: {
-  widgets: WidgetMeta[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "8px 0 12px" }}>
-      {widgets.map((widget) => {
-        const active = widget.id === selectedId;
-        return (
-          <Tooltip key={widget.id} title={widget.name} placement="right" mouseEnterDelay={0.2}>
-            <div
-              onClick={() => onSelect(widget.id)}
-              role="button"
-              aria-label={widget.name}
-              aria-pressed={active}
-              style={{
-                position: "relative",
-                cursor: "pointer",
-                width: 40,
-                height: 40,
-                display: "grid",
-                placeItems: "center",
-                borderRadius: 10,
-                background: active ? "var(--bg-item)" : "transparent",
-                boxShadow: active ? "inset 0 0 0 1px var(--border-strong)" : "none",
-              }}
-            >
-              {active && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: -6,
-                    top: 8,
-                    bottom: 8,
-                    width: 3,
-                    borderRadius: 2,
-                    background: "var(--accent)",
-                  }}
-                />
-              )}
-              <WidgetIcon icon={widget.icon} active={active} />
-            </div>
-          </Tooltip>
-        );
-      })}
-    </div>
-  );
-}
-
-function WidgetIcon({ icon, active }: { icon: WidgetMeta["icon"]; active?: boolean }) {
+function WidgetIcon({ icon }: { icon: WidgetMeta["icon"] }) {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -109,15 +48,14 @@ function WidgetIcon({ icon, active }: { icon: WidgetMeta["icon"]; active?: boole
     <span
       ref={ref}
       style={{
-        width: 38,
-        height: 38,
+        width: 26,
+        height: 26,
         display: "grid",
         placeItems: "center",
-        borderRadius: 10,
+        borderRadius: 7,
         background: "var(--bg-icon)",
-        fontSize: 18,
+        fontSize: 15,
         flexShrink: 0,
-        opacity: active ? 1 : 0.75,
       }}
     />
   );
