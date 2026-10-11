@@ -175,7 +175,7 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 | `schemaVersion` | number | 必须为 `1`，表示配置协议版本 |
 | `id` | string | 与注册 ID、目录名一致 |
 | `name` | string | 工作台显示名称，不能为空 |
-| `icon` | string | 工作台显示文本图标，可用 Emoji；当前不是图片 URL |
+| `icon` | string / object | 文本、Emoji、文本对象或图片对象，见图标配置 |
 | `summary` | string | 插件列表中的短简介，不能为空 |
 | `description` | string | 配置面板中的功能说明，不能为空 |
 | `version` | string | 插件版本，建议使用 `0.1.0`；不会自动递增 |
@@ -186,6 +186,36 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 入口路径不接受绝对地址、`../`、查询参数或路径中的空格，建议使用英文文件名。`entry.css` 必须是数组；当前 `npm run check` 要求插件实际生成至少一个独立 CSS 文件。
 
 配置文件是公开资源，不应包含服务端 Token、密码或私钥。
+
+### 图标配置
+
+兼容已有文本或 Emoji 字符串，也支持显式文本对象：
+
+```json
+"icon": "👋"
+```
+
+```json
+"icon": { "type": "text", "value": "◷" }
+```
+
+本地 PNG、JPG/JPEG、GIF、WebP、AVIF、SVG 或 ICO：
+
+```json
+"icon": { "type": "image", "src": "./assets/icon.svg", "alt": "日期时钟", "fallback": "◷" }
+```
+
+远程图片只接受 HTTP(S) 完整 URL：
+
+```json
+"icon": { "type": "image", "src": "https://example.com/icon.png", "fallback": "👋" }
+```
+
+上面的片段是 `config.json` 内的属性，不是独立 JSON 文档。图片对象的 `alt` 和 `fallback` 是可选字符串；alt 默认空字符串，图片失败时显示 fallback，未配置或为空时显示 ◷。文本对象的 value 必须为非空字符串。图标库名称和内联 SVG/HTML 不在当前协议内。
+
+本地 src 相对于 config.json，须以 ./ 开头，不允许 ../、绝对路径、空格或查询参数。文件必须存在。构建器自动将图标发布为 `assets/icon-[hash].扩展名`，并更新发布配置与清单；该图标无需代码引用，也不会内联。远程图片由浏览器加载，构建时不下载、不复制；HTTPS 页面建议使用 HTTPS 图片地址。
+
+开发清单与生产清单均将本地 src 解析为站点根路径，单份发布配置仍保留相对路径。外部工作台应按配置 URL 解析本地图标路径。图片按 24×24 区域等比显示；SVG 通过 img 加载，不将内容插入 DOM。
 
 ## 4. 参数字段规范
 
@@ -342,7 +372,7 @@ CSS 中引用：
 - 不要硬编码 `/widgets/hello/assets/background.png`，发布后的文件名可能带哈希；使用 import 得到的 URL 或 CSS 相对引用。
 - 动态拼接的资源路径不会自动遍历目录。资源列表可用明确的静态导入建立映射。
 - `entry.css` 只描述样式入口，不是静态文件列表；当前没有 `entry.assets` 或 `staticDir` 字段。
-- 图片图标不应直接填入顶层 `icon`，该字段当前作为文本渲染。
+- 本地图标可以仅通过顶层 `icon` 引用，不必在 JS 中 import；构建器会单独发布图标。
 
 ## 7. API 请求
 
@@ -371,7 +401,7 @@ loadStatus();
 npm run check
 ```
 
-该命令检查后端语法，构建工作台与每个插件，并验证配置、元信息、资源路径、JS 的 `render` 导出、尺寸字段及 CSS 产物。
+该命令先验证图标协议、资源发布和渲染回退，再检查后端语法，构建工作台与每个插件，并验证配置、元信息、资源路径、JS 的 `render` 导出、尺寸字段及 CSS 产物。
 
 只构建可执行 `npm run build`，本地检查发布产物可执行 `npm run preview`，访问 `http://127.0.0.1:4173`。涉及 API 的插件还需要运行后端，例如在另一个终端执行 `npm run dev:api`。
 

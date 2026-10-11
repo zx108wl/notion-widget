@@ -4,11 +4,11 @@ export function validateConfig(config, widgetId) {
   if (config?.schemaVersion !== 1 || config.id !== widgetId || !Array.isArray(config.fields)) {
     throw new Error("Invalid widget config: " + widgetId);
   }
-  for (const key of ["name", "icon", "summary", "description", "version"]) {
+  for (const key of ["name", "summary", "description", "version"]) {
     if (typeof config[key] !== "string" || !config[key].trim()) throw new Error("Missing widget metadata: " + key);
   }
-  const localAsset = value => typeof value === "string" && /^\.\/[a-zA-Z0-9_./-]+$/.test(value) && !value.slice(2).split("/").some(part => !part || part === "." || part === "..");
-  if (!localAsset(config.entry?.js) || !config.entry.js.endsWith(".js") || !Array.isArray(config.entry.css) || config.entry.css.some(value => !localAsset(value) || !value.endsWith(".css"))) throw new Error("Invalid widget entry: " + widgetId);
+  validateIcon(config.icon);
+  if (!isLocalAssetPath(config.entry?.js) || !config.entry.js.endsWith(".js") || !Array.isArray(config.entry.css) || config.entry.css.some(value => !isLocalAssetPath(value) || !value.endsWith(".css"))) throw new Error("Invalid widget entry: " + widgetId);
   const keys = new Set();
   for (const field of config.fields) {
     if (!field || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(field.key) || keys.has(field.key) || typeof field.label !== "string" || !types.has(field.type) || typeof field.default !== "string") {
@@ -42,7 +42,30 @@ export function resolveFields(config, widgetId, now = new Date()) {
   });
 }
 
-export function widgetMetadata(config) {
+export function widgetMetadata(config, configUrl) {
   const { id, name, icon, summary, description, version } = config;
-  return { id, name, icon, summary, description, version };
+  const resolvedIcon = icon?.type === "image" && isLocalAssetPath(icon.src) && configUrl
+    ? { ...icon, src: new URL(icon.src, new URL(configUrl, "https://widget.invalid")).pathname }
+    : icon;
+  return { id, name, icon: resolvedIcon, summary, description, version };
+}
+
+export function isLocalAssetPath(value) {
+  return typeof value === "string" && /^\.\/[a-zA-Z0-9_./-]+$/.test(value) && !value.slice(2).split("/").some(part => !part || part === "." || part === "..");
+}
+
+export function validateIcon(icon) {
+  if (typeof icon === "string" && icon.trim()) return icon;
+  if (!icon || typeof icon !== "object" || Array.isArray(icon)) throw new Error("Invalid widget icon");
+  if (icon.type === "text" && typeof icon.value === "string" && icon.value.trim()) return icon;
+  if (icon.type !== "image" || typeof icon.src !== "string") throw new Error("Invalid widget icon type or source");
+  for (const key of ["alt", "fallback"]) {
+    if (icon[key] !== undefined && typeof icon[key] !== "string") throw new Error("Invalid icon " + key);
+  }
+  if (isLocalAssetPath(icon.src) && /\.(png|jpe?g|gif|webp|avif|svg|ico)$/i.test(icon.src)) return icon;
+  try {
+    const url = new URL(icon.src);
+    if (/^https?:\/\//i.test(icon.src) && ["http:", "https:"].includes(url.protocol)) return icon;
+  } catch { /* Report a consistent validation error below. */ }
+  throw new Error("Icon must use a local image path or HTTP(S) URL");
 }

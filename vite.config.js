@@ -14,7 +14,7 @@ export default defineConfig({
               const config = JSON.parse(await readFile(new URL(`./widgets/${id}/config.json`, import.meta.url), "utf8"));
               validateConfig(config, id);
               return [id, {
-                ...widgetMetadata(config),
+                ...widgetMetadata(config, `/widgets/${id}/config.json`),
                 config: `/widgets/${id}/config.json`,
                 js: `/widgets/${id}/${config.entry.js.slice(2)}`,
                 css: [], // Vite 在开发模式通过 JS 导入注入样式。

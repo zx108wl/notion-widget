@@ -29,8 +29,13 @@ for (const widgetId of registeredIds) {
   }
   const resolveEntry = value => prefix + value.slice(2);
   if (resolveEntry(config.entry.js) !== entry.js || JSON.stringify(config.entry.css.map(resolveEntry)) !== JSON.stringify(entry.css)) throw new Error("配置入口与清单不一致: " + widgetId);
-  for (const [key, value] of Object.entries(widgetMetadata(config))) {
-    if (entry[key] !== value) throw new Error("配置元信息与清单不一致: " + widgetId + "/" + key);
+  for (const [key, value] of Object.entries(widgetMetadata(config, entry.config))) {
+    if (JSON.stringify(entry[key]) !== JSON.stringify(value)) throw new Error("配置元信息与清单不一致: " + widgetId + "/" + key);
+  }
+  if (config.icon?.type === "image" && config.icon.src.startsWith("./")) {
+    const iconUrl = new URL(config.icon.src, `https://widget.invalid${entry.config}`).pathname;
+    if (!iconUrl.startsWith(prefix + "assets/")) throw new Error("图标不在插件资源目录内: " + widgetId);
+    await access(path.join(dist, iconUrl.slice(1)));
   }
   if (typeof module.render !== "function") throw new Error(`组件 ${widgetId} 未导出 render`);
   for (const dimension of ["width", "height"]) {

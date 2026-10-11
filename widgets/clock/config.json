@@ -1,7 +1,12 @@
 {
   "schemaVersion": 1,
   "id": "clock",
-  "icon": "◷",
+  "icon": {
+    "type": "image",
+    "src": "./assets/icon.svg",
+    "alt": "日期时钟",
+    "fallback": "◷"
+  },
   "name": "日期时钟",
   "summary": "时间、日期与时区",
   "description": "简洁的数字时钟，支持时区、秒钟和 12 小时制。",

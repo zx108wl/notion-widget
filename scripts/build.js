@@ -1,3 +1,4 @@
+import { publishIcon } from "./widget-icon-assets.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,9 +49,10 @@ for (const widget of Object.values(widgets)) {
     js: `./${entry.fileName.slice(prefix.length)}`,
     css: css.map(asset => `./${asset.fileName.slice(prefix.length)}`),
   } };
+  publishedConfig.icon = await publishIcon(config.icon, path.join(root, "widgets", widget.id), path.join(root, "dist", "widgets", widget.id));
   await writeFile(path.join(root, "dist", "widgets", widget.id, "config.json"), JSON.stringify(publishedConfig, null, 2) + "\n");
   manifest[widget.id] = {
-    ...widgetMetadata(config),
+    ...widgetMetadata(publishedConfig, `/widgets/${widget.id}/config.json`),
     config: `/widgets/${widget.id}/config.json`,
     js: `/${entry.fileName}`,
     css: css.map((asset) => `/${asset.fileName}`),

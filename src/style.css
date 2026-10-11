@@ -79,3 +79,5 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .widget-option { grid-template-columns: 1fr; text-align: center; } .widget-option small { display: none; } .widget-icon { margin: auto; }
   .editor { padding: 16px; } .panel-heading { display: block; } .path-badge { display: inline-block; margin-top: 12px; } .url-row { grid-template-columns: 1fr; }
 }
+
+.widget-icon img { display: block; width: 24px; height: 24px; object-fit: contain; }

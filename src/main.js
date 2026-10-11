@@ -1,4 +1,5 @@
 import "./style.css";
+import { createWidgetIcon } from "./widget-icon.js";
 import { resolveFields } from "./widget-config.js";
 let widgets = {};
 
@@ -97,7 +98,8 @@ function renderConfigurator() {
     button.type = "button";
     button.className = "widget-option";
     button.dataset.widgetId = widget.id;
-    button.innerHTML = `<span class="widget-icon">${escapeHtml(widget.icon)}</span><span><strong>${escapeHtml(widget.name)}</strong><small>${escapeHtml(widget.summary)}</small></span>`;
+    button.innerHTML = `<span class="widget-icon"></span><span><strong>${escapeHtml(widget.name)}</strong><small>${escapeHtml(widget.summary)}</small></span>`;
+    button.querySelector(".widget-icon").replaceWith(createWidgetIcon(widget.icon));
     button.addEventListener("click", () => selectWidget(widget.id));
     list.append(button);
   });
