@@ -163,7 +163,14 @@ export function App() {
           collapsedWidth={28}
           style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflow: "hidden", position: "relative" }}
         >
-          <div style={{ display: "flex", height: "100%", alignItems: "flex-start" }}>
+          <div
+            style={{
+              display: "flex",
+              height: "100%",
+              alignItems: "flex-start",
+              justifyContent: rightCollapsed ? "center" : "flex-start",
+            }}
+          >
             {/* 纵向选项卡：始终可见，宽高由竖排文字内容决定 */}
             <div
               className={"side-tab" + (rightCollapsed ? "" : " active")}
