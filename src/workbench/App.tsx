@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Layout, Spin, Typography } from "antd";
+import { Button, Layout, Spin, Typography } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
@@ -93,12 +93,25 @@ export function App() {
 
   return (
     <Layout style={{ height: "100vh" }}>
-      <Header style={{ display: "flex", alignItems: "center", gap: 16, background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
+      <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", borderBottom: "1px solid #f0f0f0" }}>
+        <Button
+          type="text"
+          icon={leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
+          onClick={() => setLeftCollapsed(!leftCollapsed)}
+          style={{ flexShrink: 0 }}
+        />
         <Typography.Title level={4} style={{ margin: 0 }}>
           <span style={{ background: "#000", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
           Notion 小组件
         </Typography.Title>
         <Typography.Text type="secondary">选择组件，生成可嵌入的专属 URL</Typography.Text>
+        <div style={{ flex: 1 }} />
+        <Button
+          type="text"
+          icon={rightCollapsed ? <LeftOutlined /> : <RightOutlined />}
+          onClick={() => setRightCollapsed(!rightCollapsed)}
+          style={{ flexShrink: 0 }}
+        />
       </Header>
       <Layout style={{ overflow: "hidden" }}>
         <Sider
@@ -107,39 +120,17 @@ export function App() {
           collapsed={leftCollapsed}
           onCollapse={setLeftCollapsed}
           trigger={null}
+          collapsedWidth={64}
           style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", overflowY: "auto" }}
         >
           {!leftCollapsed && (
-            <div style={{ padding: "20px 12px" }}>
+            <div style={{ padding: "20px 12px 12px" }}>
               <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
                 组件库
               </Typography.Text>
             </div>
           )}
           <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
-          <div
-            onClick={() => setLeftCollapsed(!leftCollapsed)}
-            style={{
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 16,
-              height: 48,
-              background: "#fff",
-              border: "1px solid #f0f0f0",
-              borderRight: "none",
-              borderRadius: "8px 0 0 8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "-2px 0 6px rgba(0,0,0,0.06)",
-              zIndex: 10,
-            }}
-          >
-            {leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
-          </div>
         </Sider>
         <Content style={{ padding: 24, overflow: "auto" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -197,29 +188,6 @@ export function App() {
               </div>
             </>
           )}
-          <div
-            onClick={() => setRightCollapsed(!rightCollapsed)}
-            style={{
-              position: "absolute",
-              left: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 16,
-              height: 48,
-              background: "#fff",
-              border: "1px solid #f0f0f0",
-              borderLeft: "none",
-              borderRadius: "0 8px 8px 0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "2px 0 6px rgba(0,0,0,0.06)",
-              zIndex: 10,
-            }}
-          >
-            {rightCollapsed ? <LeftOutlined /> : <RightOutlined />}
-          </div>
         </Sider>
       </Layout>
     </Layout>
