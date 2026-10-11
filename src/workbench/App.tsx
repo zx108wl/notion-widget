@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Layout, Spin, Typography } from "antd";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
 import { PreviewPanel } from "./components/PreviewPanel.js";
@@ -20,6 +21,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [loadingFields, setLoadingFields] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
   // 加载清单
   useEffect(() => {
@@ -98,11 +101,45 @@ export function App() {
         <Typography.Text type="secondary">选择组件，生成可嵌入的专属 URL</Typography.Text>
       </Header>
       <Layout style={{ overflow: "hidden" }}>
-        <Sider width={260} style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", padding: "20px 12px", overflowY: "auto" }}>
-          <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
-            组件库
-          </Typography.Text>
-          <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} />
+        <Sider
+          width={260}
+          collapsible
+          collapsed={leftCollapsed}
+          onCollapse={setLeftCollapsed}
+          trigger={null}
+          style={{ background: "#fafafa", borderRight: "1px solid #f0f0f0", overflowY: "auto" }}
+        >
+          {!leftCollapsed && (
+            <div style={{ padding: "20px 12px" }}>
+              <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
+                组件库
+              </Typography.Text>
+            </div>
+          )}
+          <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
+          <div
+            onClick={() => setLeftCollapsed(!leftCollapsed)}
+            style={{
+              position: "absolute",
+              right: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 16,
+              height: 48,
+              background: "#fff",
+              border: "1px solid #f0f0f0",
+              borderRight: "none",
+              borderRadius: "8px 0 0 8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "-2px 0 6px rgba(0,0,0,0.06)",
+              zIndex: 10,
+            }}
+          >
+            {leftCollapsed ? <RightOutlined /> : <LeftOutlined />}
+          </div>
         </Sider>
         <Content style={{ padding: 24, overflow: "auto" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -126,25 +163,62 @@ export function App() {
             </div>
           </div>
         </Content>
-        <Sider width={400} style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", padding: "20px 12px", overflowY: "auto" }}>
-          <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
-            配置面板
-          </Typography.Text>
-          <div style={{ padding: "12px 12px 0" }}>
-            {loadingFields ? (
-              <Spin />
-            ) : (
-              <ConfigForm
-                fields={fields}
-                values={values}
-                onChange={handleValuesChange}
-                widgetBase={
-                  selectedWidget
-                    ? new URL(".", new URL(selectedWidget.config, window.location.origin)).href
-                    : undefined
-                }
-              />
-            )}
+        <Sider
+          width={400}
+          collapsible
+          collapsed={rightCollapsed}
+          onCollapse={setRightCollapsed}
+          trigger={null}
+          collapsedWidth={0}
+          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflowY: "auto" }}
+        >
+          {!rightCollapsed && (
+            <>
+              <div style={{ padding: "20px 12px 12px" }}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", padding: "0 12px" }}>
+                  配置面板
+                </Typography.Text>
+              </div>
+              <div style={{ padding: "0 12px" }}>
+                {loadingFields ? (
+                  <Spin />
+                ) : (
+                  <ConfigForm
+                    fields={fields}
+                    values={values}
+                    onChange={handleValuesChange}
+                    widgetBase={
+                      selectedWidget
+                        ? new URL(".", new URL(selectedWidget.config, window.location.origin)).href
+                        : undefined
+                    }
+                  />
+                )}
+              </div>
+            </>
+          )}
+          <div
+            onClick={() => setRightCollapsed(!rightCollapsed)}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 16,
+              height: 48,
+              background: "#fff",
+              border: "1px solid #f0f0f0",
+              borderLeft: "none",
+              borderRadius: "0 8px 8px 0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "2px 0 6px rgba(0,0,0,0.06)",
+              zIndex: 10,
+            }}
+          >
+            {rightCollapsed ? <LeftOutlined /> : <RightOutlined />}
           </div>
         </Sider>
       </Layout>

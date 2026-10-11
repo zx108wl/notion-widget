@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Input, Space, Typography } from "antd";
+import { Button, Input, Modal, Popconfirm, Space, Tooltip, Typography } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Field } from "../../core/schema/field.schema.js";
 import { validateValues } from "../../core/validation/index.js";
 
@@ -9,11 +10,28 @@ interface PreviewPanelProps {
   values: Record<string, string>;
 }
 
-const PRESETS = [
-  { label: "手机", width: 375, height: 667 },
-  { label: "Notion", width: 700, height: 400 },
-  { label: "宽嵌入", width: 900, height: 500 },
-];
+interface Preset {
+  label: string;
+  width: number;
+  height: number;
+}
+
+const STORAGE_KEY = "notion-widget:view-presets";
+
+function loadPresets(): Preset[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePresets(presets: Preset[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+}
 
 export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -27,6 +45,9 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
   const [viewWidth, setViewWidth] = useState(375);
   const [viewHeight, setViewHeight] = useState(300);
   const [fitScale, setFitScale] = useState(1);
+  const [presets, setPresets] = useState<Preset[]>(() => loadPresets());
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
   const dragRef = useRef<{ handle: "e" | "s" | "se"; startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   // 计算缩放比例，让视口适配预览区域
@@ -141,6 +162,22 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
     setViewHeight(h);
   };
 
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    const next = [...presets, { label: name, width: viewWidth, height: viewHeight }];
+    setPresets(next);
+    savePresets(next);
+    setPresetName("");
+    setSaveModalOpen(false);
+  };
+
+  const handleDeletePreset = (label: string) => {
+    const next = presets.filter((p) => p.label !== label);
+    setPresets(next);
+    savePresets(next);
+  };
+
   // 拖拽调整视口尺寸
   const startDrag = (handle: "e" | "s" | "se") => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -217,17 +254,52 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         </Space.Compact>
         <span style={{ fontSize: 12, color: "#bfbfbf" }}>px</span>
         <div style={{ flex: 1 }} />
-        {PRESETS.map((p) => (
-          <Button
-            key={p.label}
-            size="small"
-            type={viewWidth === p.width && viewHeight === p.height ? "primary" : "default"}
-            onClick={() => applyPreset(p.width, p.height)}
-          >
-            {p.label}
-          </Button>
+        {presets.map((p) => (
+          <Tooltip key={p.label} title={`${p.width} × ${p.height} px`}>
+            <span style={{ display: "inline-flex", alignItems: "center" }}>
+              <Button
+                size="small"
+                type={viewWidth === p.width && viewHeight === p.height ? "primary" : "default"}
+                onClick={() => applyPreset(p.width, p.height)}
+                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+              >
+                {p.label}
+              </Button>
+              <Popconfirm title="删除该预设？" onConfirm={() => handleDeletePreset(p.label)} okText="删除" cancelText="取消">
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginLeft: -1 }}
+                />
+              </Popconfirm>
+            </span>
+          </Tooltip>
         ))}
+        <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => setSaveModalOpen(true)}>
+          保存预设
+        </Button>
       </div>
+
+      <Modal
+        title="保存视口预设"
+        open={saveModalOpen}
+        onOk={handleSavePreset}
+        onCancel={() => { setSaveModalOpen(false); setPresetName(""); }}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          将当前尺寸 <Typography.Text code>{viewWidth} × {viewHeight}</Typography.Text> 保存为预设
+        </Typography.Paragraph>
+        <Input
+          placeholder="输入预设名称"
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+          onPressEnter={handleSavePreset}
+          autoFocus
+        />
+      </Modal>
 
       {/* 预览舞台：灰色背景，居中显示设备视口 */}
       <div

@@ -7,9 +7,32 @@ interface WidgetCatalogProps {
   widgets: WidgetMeta[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  collapsed?: boolean;
 }
 
-export function WidgetCatalog({ widgets, selectedId, onSelect }: WidgetCatalogProps) {
+export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: WidgetCatalogProps) {
+  if (collapsed) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "12px 8px" }}>
+        {widgets.map((widget) => (
+          <div
+            key={widget.id}
+            onClick={() => onSelect(widget.id)}
+            title={widget.name}
+            style={{
+              cursor: "pointer",
+              padding: 8,
+              borderRadius: 10,
+              background: selectedId === widget.id ? "#fff" : "transparent",
+              border: selectedId === widget.id ? "1px solid #d9d9d9" : "1px solid transparent",
+            }}
+          >
+            <WidgetIcon icon={widget.icon} />
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <List
       dataSource={widgets}
