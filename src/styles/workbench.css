@@ -52,6 +52,20 @@ body {
   background: var(--bg-page);
 }
 
+/* 左侧导航 Sider 标题行 */
+.sider-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 12px 12px;
+}
+.sider-title[data-collapsed="true"] {
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  padding: 12px 8px;
+}
+
 /* widget icon 图片 */
 .widget-icon img {
   display: block;

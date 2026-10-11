@@ -107,59 +107,53 @@ export function App({
 
   return (
     <Layout style={{ height: "100vh" }}>
-      <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-page)", borderBottom: "1px solid var(--border-color)" }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          <span style={{ background: "var(--accent)", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
-          Notion 小组件
-        </Typography.Title>
-        <Typography.Text type="secondary" style={{ flex: 1 }}>选择组件，生成可嵌入的专属 URL</Typography.Text>
-        <Segmented options={THEME_OPTIONS} value={themeMode} onChange={(v) => onThemeModeChange(v as ThemeMode)} />
-      </Header>
+      {/* 左侧导航 Sider（官方 side-menu 模式） */}
+      <Sider
+        theme="light"
+        width={260}
+        collapsible
+        collapsed={leftCollapsed}
+        onCollapse={setLeftCollapsed}
+        trigger={null}
+        collapsedWidth={64}
+        style={{ background: "var(--bg-sider)", borderRight: "1px solid var(--border-color)", overflowY: "auto" }}
+      >
+        <div className="sider-title" data-collapsed={leftCollapsed}>
+          {leftCollapsed ? (
+            <Tooltip title="展开组件库" placement="right">
+              <Button
+                type="text"
+                icon={<AppstoreOutlined style={{ color: "var(--accent)" }} />}
+                onClick={() => setLeftCollapsed(false)}
+              />
+            </Tooltip>
+          ) : (
+            <>
+              <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                组件库
+              </Typography.Text>
+              <Button
+                type="text"
+                size="small"
+                icon={<LeftOutlined />}
+                onClick={() => setLeftCollapsed(true)}
+              />
+            </>
+          )}
+        </div>
+        <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
+      </Sider>
       <Layout style={{ overflow: "hidden" }}>
-        <Sider
-          width={260}
-          collapsible
-          collapsed={leftCollapsed}
-          onCollapse={setLeftCollapsed}
-          trigger={null}
-          collapsedWidth={64}
-          style={{ background: "var(--bg-sider)", borderRight: "1px solid var(--border-color)", overflowY: "auto" }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: leftCollapsed ? "column" : "row",
-              alignItems: "center",
-              gap: 4,
-              justifyContent: leftCollapsed ? "center" : "space-between",
-              padding: leftCollapsed ? "12px 8px" : "20px 12px 12px",
-            }}
-          >
-            {leftCollapsed ? (
-              <Tooltip title="展开组件库" placement="right">
-                <Button
-                  type="text"
-                  icon={<AppstoreOutlined style={{ color: "var(--accent)" }} />}
-                  onClick={() => setLeftCollapsed(false)}
-                />
-              </Tooltip>
-            ) : (
-              <>
-                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                  组件库
-                </Typography.Text>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<LeftOutlined />}
-                  onClick={() => setLeftCollapsed(true)}
-                />
-              </>
-            )}
-          </div>
-          <WidgetCatalog widgets={widgets} selectedId={selectedId} onSelect={setSelectedId} collapsed={leftCollapsed} />
-        </Sider>
-        <Content style={{ padding: 24, overflow: "auto" }}>
+        <Header style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-page)", borderBottom: "1px solid var(--border-color)" }}>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            <span style={{ background: "var(--accent)", color: "#fff", padding: "4px 10px", borderRadius: 8, marginRight: 10 }}>W</span>
+            Notion 小组件
+          </Typography.Title>
+          <Typography.Text type="secondary" style={{ flex: 1 }}>选择组件，生成可嵌入的专属 URL</Typography.Text>
+          <Segmented options={THEME_OPTIONS} value={themeMode} onChange={(v) => onThemeModeChange(v as ThemeMode)} />
+        </Header>
+        <Layout style={{ overflow: "hidden" }}>
+          <Content style={{ padding: 24, overflow: "auto" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
@@ -224,6 +218,7 @@ export function App({
             )}
           </div>
         </Sider>
+        </Layout>
       </Layout>
     </Layout>
   );

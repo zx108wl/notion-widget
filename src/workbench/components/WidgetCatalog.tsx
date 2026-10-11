@@ -10,7 +10,7 @@ interface WidgetCatalogProps {
   collapsed?: boolean;
 }
 
-/* 左侧导航菜单：展开显示图标+名称+摘要，折叠由 Menu inlineCollapsed 处理（图标+Tooltip） */
+/* 左侧导航菜单：标准 Menu 项（图标+名称），折叠与 Tooltip 由 Menu 内建处理 */
 export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: WidgetCatalogProps) {
   return (
     <Menu
@@ -22,15 +22,8 @@ export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: Widg
       items={widgets.map((widget) => ({
         key: widget.id,
         icon: <WidgetIcon icon={widget.icon} />,
-        label: collapsed ? widget.name : (
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, lineHeight: 1.35 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{widget.name}</span>
-            <span style={{ color: "var(--text-secondary)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {widget.summary}
-            </span>
-          </div>
-        ),
-        title: widget.name,
+        label: widget.name,
+        title: widget.summary ? `${widget.name} · ${widget.summary}` : widget.name,
       }))}
     />
   );
