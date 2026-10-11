@@ -28,6 +28,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
   const [viewWidth, setViewWidth] = useState(375);
   const [viewHeight, setViewHeight] = useState(300);
   const [fitScale, setFitScale] = useState(1);
+  const dragRef = useRef<{ handle: "e" | "s" | "se"; startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   // 计算缩放比例，让视口适配预览区域
   useEffect(() => {
@@ -141,6 +142,35 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
     setViewHeight(h);
   };
 
+  // 拖拽调整视口尺寸
+  const startDrag = (handle: "e" | "s" | "se") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { handle, startX: e.clientX, startY: e.clientY, startW: viewWidth, startH: viewHeight };
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const scale = fitScale || 1;
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (drag.handle === "e" || drag.handle === "se") {
+        setViewWidth(Math.max(1, Math.round(drag.startW + dx)));
+      }
+      if (drag.handle === "s" || drag.handle === "se") {
+        setViewHeight(Math.max(1, Math.round(drag.startH + dy)));
+      }
+    };
+    const onUp = () => { dragRef.current = null; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [fitScale]);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -218,6 +248,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
       >
         <div
           style={{
+            position: "relative",
             width: viewWidth * fitScale,
             height: viewHeight * fitScale,
             boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
@@ -236,13 +267,55 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
               background: "transparent",
               transform: `scale(${fitScale})`,
               transformOrigin: "top left",
+              pointerEvents: "none",
+            }}
+          />
+          {/* 拖拽手柄：右边 */}
+          <div
+            onMouseDown={startDrag("e")}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: -4,
+              width: 8,
+              height: "100%",
+              cursor: "ew-resize",
+              zIndex: 10,
+            }}
+          />
+          {/* 拖拽手柄：下边 */}
+          <div
+            onMouseDown={startDrag("s")}
+            style={{
+              position: "absolute",
+              left: 0,
+              bottom: -4,
+              width: "100%",
+              height: 8,
+              cursor: "ns-resize",
+              zIndex: 10,
+            }}
+          />
+          {/* 拖拽手柄：右下角 */}
+          <div
+            onMouseDown={startDrag("se")}
+            style={{
+              position: "absolute",
+              right: -5,
+              bottom: -5,
+              width: 14,
+              height: 14,
+              cursor: "nwse-resize",
+              zIndex: 11,
+              background: "linear-gradient(135deg, transparent 50%, #6c5ce7 50%)",
+              borderRadius: "0 0 8px 0",
             }}
           />
         </div>
       </div>
 
       <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
-        视口尺寸决定组件的渲染宽高，预览会自动缩放以适配区域（实际组件尺寸不变）
+        视口尺寸决定组件渲染宽高，可拖拽框架边缘或右下角调整；预览会自动缩放适配区域
       </Typography.Paragraph>
 
       <div style={{ marginTop: 16 }}>
