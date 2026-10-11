@@ -13,7 +13,7 @@ interface WidgetCatalogProps {
 export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: WidgetCatalogProps) {
   if (collapsed) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "12px 8px" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "0 12px" }}>
         {widgets.map((widget) => (
           <div
             key={widget.id}
@@ -21,7 +21,10 @@ export function WidgetCatalog({ widgets, selectedId, onSelect, collapsed }: Widg
             title={widget.name}
             style={{
               cursor: "pointer",
-              padding: 8,
+              width: 40,
+              height: 40,
+              display: "grid",
+              placeItems: "center",
               borderRadius: 10,
               background: selectedId === widget.id ? "#fff" : "transparent",
               border: selectedId === widget.id ? "1px solid #d9d9d9" : "1px solid transparent",

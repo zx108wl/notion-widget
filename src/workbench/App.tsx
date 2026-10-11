@@ -161,21 +161,23 @@ export function App() {
           onCollapse={setRightCollapsed}
           trigger={null}
           collapsedWidth={40}
-          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflowY: "auto", position: "relative" }}
+          style={{ background: "#fafafa", borderLeft: "1px solid #f0f0f0", overflow: "hidden", position: "relative" }}
         >
-          {rightCollapsed ? (
+          <div style={{ display: "flex", height: "100%" }}>
+            {/* 纵向选项卡：始终可见，选中态高亮 */}
             <div
-              onClick={() => setRightCollapsed(false)}
+              onClick={() => setRightCollapsed(!rightCollapsed)}
               style={{
-                position: "sticky",
-                top: 0,
-                height: "100vh",
+                width: 40,
+                flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                background: "#f0f0f0",
-                borderLeft: "3px solid #6c5ce7",
+                background: rightCollapsed ? "#f0f0f0" : "#fff",
+                borderRight: rightCollapsed ? "none" : "3px solid #6c5ce7",
+                borderLeft: rightCollapsed ? "3px solid transparent" : "none",
+                transition: "background 0.2s",
               }}
             >
               <span
@@ -183,30 +185,20 @@ export function App() {
                   writingMode: "vertical-rl",
                   textOrientation: "mixed",
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: rightCollapsed ? 500 : 600,
                   letterSpacing: "0.3em",
-                  color: "#6c5ce7",
+                  color: rightCollapsed ? "#8c8c8c" : "#6c5ce7",
+                  userSelect: "none",
                 }}
               >
                 配置面板
               </span>
             </div>
-          ) : (
-            <>
-              <div style={{ padding: "20px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Typography.Text type="secondary" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                  配置面板
-                </Typography.Text>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<RightOutlined />}
-                  onClick={() => setRightCollapsed(true)}
-                />
-              </div>
-              <div style={{ padding: "0 12px" }}>
+            {/* 面板内容：仅展开时显示 */}
+            {!rightCollapsed && (
+              <div style={{ flex: 1, overflowY: "auto", minWidth: 0, padding: "16px 16px 24px" }}>
                 {loadingFields ? (
-                  <Spin />
+                  <Spin style={{ marginTop: 24 }} />
                 ) : (
                   <ConfigForm
                     fields={fields}
@@ -220,8 +212,8 @@ export function App() {
                   />
                 )}
               </div>
-            </>
-          )}
+            )}
+          </div>
         </Sider>
       </Layout>
     </Layout>
