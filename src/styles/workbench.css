@@ -1,5 +1,10 @@
 :root {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  /* 选项卡配色变量 */
+  --side-accent: #6c5ce7;      /* 主题强调色 */
+  --side-bar-bg: #f2effc;      /* 状态栏底色（低饱和紫灰） */
+  --side-tab-bg: #ffffff;      /* 选中按钮底色 */
+  --side-tab-text-idle: #9a97a3; /* 未选中文字 */
 }
 * {
   box-sizing: border-box;
@@ -26,8 +31,8 @@ body,
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #ece9fb;
-  border-left: 3px solid #6c5ce7;
+  background: var(--side-bar-bg);
+  border-left: 3px solid var(--side-accent);
   transition: background 0.2s;
 }
 .side-bar.collapsed {
@@ -38,11 +43,13 @@ body,
 .side-tab {
   padding: 10px 7px;
   cursor: pointer;
-  background: #fff;
+  background: var(--side-tab-bg);
+  box-shadow: inset 0 0 0 1px #e7e2f6;
   transition: background 0.2s;
 }
 .side-bar.collapsed .side-tab {
   background: transparent;
+  box-shadow: none;
 }
 .side-tab-text {
   display: inline-block;
@@ -51,15 +58,15 @@ body,
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.25em;
-  color: #8c8c8c;
+  color: var(--side-tab-text-idle);
   user-select: none;
   transition: color 0.2s;
 }
 .side-tab:hover .side-tab-text {
-  color: #6c5ce7;
+  color: var(--side-accent);
 }
 .side-bar:not(.collapsed) .side-tab-text {
-  color: #6c5ce7;
+  color: var(--side-accent);
   font-weight: 600;
 }
 /* 面板内容区 */
