@@ -3,19 +3,18 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { validateConfig, widgetMetadata } from "../src/core/schema/widget-config.schema.js";
+import { validateConfig } from "../src/core/schema/widget-config.schema.js";
+import { widgetMetadata } from "../src/core/schema/widget-config.runtime.js";
 import { iconSchema } from "../src/core/schema/icon.schema.js";
 import { publishIcon } from "../scripts/widget-icon-assets.js";
 import { createWidgetIcon } from "../src/core/icon.js";
 
-describe("icon types, config validation and metadata URL resolution", () => {
+describe("image icon validation and metadata URL resolution", () => {
   it("validates icons and resolves metadata", async () => {
     const config = JSON.parse(
       await readFile(new URL("../widgets/clock/config.json", import.meta.url), "utf8"),
     );
     for (const icon of [
-      "👋",
-      { type: "text", value: "◷" },
       { type: "image", src: "./assets/icon.svg" },
       { type: "image", src: "https://example.com/icon" },
       { type: "image", src: "http://example.com/icon.png" },
@@ -23,10 +22,12 @@ describe("icon types, config validation and metadata URL resolution", () => {
       validateConfig({ ...config, icon }, "clock");
     }
     for (const icon of [
+      "👋",
       "",
       null,
       [],
-      { type: "text", value: "" },
+      { type: "text", value: "◷" },
+      { type: "icon", name: "clock" },
       { type: "lucide", name: "clock" },
       { type: "image", src: "./../icon.svg" },
       { type: "image", src: "./assets/icon.exe" },
@@ -37,9 +38,11 @@ describe("icon types, config validation and metadata URL resolution", () => {
     ]) {
       assert.throws(() => iconSchema.parse(icon));
     }
-    const meta = widgetMetadata(config, "/widgets/clock/config.json").icon as { src: string };
+    // 本地图片图标路径转换
+    const localImage = { type: "image", src: "./assets/icon.svg", alt: "日期时钟", fallback: "◷" };
+    const meta = widgetMetadata({ ...config, icon: localImage }, "/widgets/clock/config.json").icon as { src: string };
     assert.equal(meta.src, "/widgets/clock/assets/icon.svg");
-    assert.equal((config.icon as { src: string }).src, "./assets/icon.svg");
+    // 远程图片图标原样透传
     const remote = { type: "image", src: "https://example.com/icon.png" };
     assert.deepEqual(widgetMetadata({ ...config, icon: remote }, "/widgets/clock/config.json").icon, remote);
   });
@@ -67,8 +70,9 @@ describe("local icons publish bytes with stable content hashes and preserve fall
       const second = (await publishIcon(icon, temp, outputDir)) as { src: string };
       assert.notEqual(second.src, firstImg.src);
       await assert.rejects(publishIcon({ type: "image", src: "./missing.png" }, temp, outputDir));
-      const values: (string | { type: "text"; value: string } | { type: "image"; src: string })[] =
-        ["◷", { type: "text", value: "👋" }, { type: "image", src: "https://example.com/icon.png" }];
+      const values: { type: "image"; src: string }[] = [
+        { type: "image", src: "https://example.com/icon.png" },
+      ];
       for (const value of values) {
         assert.deepEqual(await publishIcon(value, temp, outputDir), value);
       }
@@ -105,8 +109,6 @@ describe("renderer uses text, image and fallback without interpreting HTML", () 
       },
     } as unknown as Document;
     try {
-      assert.equal(createWidgetIcon("<b>◷</b>").textContent, "<b>◷</b>");
-      assert.equal(createWidgetIcon({ type: "text", value: "👋" }).textContent, "👋");
       for (const src of ["/widgets/clock/assets/icon-a.svg", "https://example.com/icon.png"]) {
         const node = createWidgetIcon({ type: "image", src, alt: "Clock", fallback: "⌛" }) as unknown as MockNode;
         const image = node.children[0] as MockNode;

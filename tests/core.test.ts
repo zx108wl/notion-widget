@@ -2,7 +2,8 @@ import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseParams, validateValue, validateValues } from "../src/core/validation/index.js";
-import { validateConfig, resolveFields } from "../src/core/schema/widget-config.schema.js";
+import { validateConfig } from "../src/core/schema/widget-config.schema.js";
+import { resolveFields } from "../src/core/schema/widget-config.runtime.js";
 import { createAsyncCache } from "../src/core/cache/async-cache.js";
 import { createRequestCache } from "../src/core/cache/request-cache.js";
 import { createWidgetRuntime } from "../src/core/runtime/index.js";
@@ -62,10 +63,20 @@ describe("control policy rejects duplicated constraints and incompatible types",
     assert.throws(() =>
       validateConfig({ ...source, fields: [{ ...numberField, default: "6" }] }, "status"),
     );
-    const countdown = JSON.parse(
-      await readFile(new URL("../widgets/countdown/config.json", import.meta.url), "utf8"),
-    );
-    assert.ok(resolveFields(countdown).find((field) => field.key === "target")!.default);
+    const relativeDateConfig = {
+      ...source,
+      fields: [
+        {
+          key: "target",
+          label: "目标时间",
+          type: "datetime-local",
+          default: "",
+          defaultValue: { kind: "relative-date", days: 7 },
+          required: true,
+        },
+      ],
+    };
+    assert.ok(resolveFields(relativeDateConfig).find((field) => field.key === "target")!.default);
   });
 });
 
