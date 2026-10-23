@@ -38,10 +38,17 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "32kb" }));
 
 // 健康检查保持公开（容器探活与 status 组件都用它），但不回显插件清单与路由：
-// 那属于部署拓扑信息，没必要对未登录访客可见
+// 那属于部署拓扑信息，没必要对未登录访客可见。
+// 每次探活都真的查一次库：库被锁死或文件损坏时必须返回 503，不能让探活一直"自己骗自己"
 app.get("/api/health", (_request, response) => {
   response.set("Cache-Control", "no-store");
-  response.json({ ok: true, time: new Date().toISOString() });
+  try {
+    db.prepare("SELECT 1 AS ok").get();
+    return response.json({ ok: true, time: new Date().toISOString() });
+  } catch (error) {
+    console.error("[api] 健康检查失败:", error);
+    return response.status(503).json({ ok: false, time: new Date().toISOString() });
+  }
 });
 
 // 插件分发器注册在核心路由之后、404 之前：核心永远优先，插件无法遮蔽核心接口
