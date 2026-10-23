@@ -17,31 +17,36 @@ export function createRequestCache<T>(fetcher: (key: string, signal: AbortSignal
       let entry = entries.get(key);
       if (!entry) {
         const controller = new AbortController();
-        entry = { controller, users: 0, ready: false } as RequestCacheEntry<T>;
-        entry.promise = Promise.resolve()
-          .then(() => fetcher(key, controller.signal))
-          .then((value) => {
-            entry!.ready = true;
-            return value;
-          })
-          .catch((error) => {
-            if (entries.get(key) === entry) entries.delete(key);
-            throw error;
-          });
+        const pending: RequestCacheEntry<T> = {
+          controller,
+          users: 0,
+          ready: false,
+          promise: Promise.resolve()
+            .then(() => fetcher(key, controller.signal))
+            .then((value) => {
+              pending.ready = true;
+              return value;
+            })
+            .catch((error) => {
+              if (entries.get(key) === pending) entries.delete(key);
+              throw error;
+            }),
+        };
+        entry = pending;
         entries.set(key, entry);
       }
       entry.users++;
       return new Promise<T>((resolve, reject) => {
         let settled = false;
-        const finish = (callback: (value: T | Error) => void, value: T | Error) => {
+        const cleanup = () => {
           if (settled) return;
           settled = true;
           signal?.removeEventListener("abort", abort);
           entry!.users--;
-          callback(value);
         };
         const abort = () => {
-          finish(reject as (value: T | Error) => void, new DOMException("Aborted", "AbortError"));
+          cleanup();
+          reject(new DOMException("Aborted", "AbortError"));
           if (!entry!.ready && entry!.users === 0) {
             if (entries.get(key) === entry) entries.delete(key);
             entry!.controller.abort();
@@ -49,8 +54,14 @@ export function createRequestCache<T>(fetcher: (key: string, signal: AbortSignal
         };
         signal?.addEventListener("abort", abort, { once: true });
         entry!.promise.then(
-          (value) => finish(resolve as (value: T | Error) => void, value),
-          (error) => finish(reject as (value: T | Error) => void, error),
+          (value) => {
+            cleanup();
+            resolve(value);
+          },
+          (error) => {
+            cleanup();
+            reject(error);
+          },
         );
       });
     },

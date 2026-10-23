@@ -8,11 +8,8 @@ function isValidLocalPath(value: string): boolean {
   return parts.every((part) => part !== "" && part !== "." && part !== "..");
 }
 
-const textIconSchema = z.object({
-  type: z.literal("text"),
-  value: z.string().min(1),
-});
-
+// 插件图标统一为图片：工作台与嵌入页共用同一渲染路径（<img>），保证视觉一致
+// 本地路径相对 widget 目录（构建时由 publishIcon 发布并加内容哈希），远程仅允许 http(s)
 const imageIconSchema = z
   .object({
     type: z.literal("image"),
@@ -49,11 +46,7 @@ const imageIconSchema = z
     }
   });
 
-export const iconSchema = z.union([
-  z.string().min(1),
-  textIconSchema,
-  imageIconSchema,
-]);
+export const iconSchema = imageIconSchema;
 export type WidgetIcon = z.infer<typeof iconSchema>;
 
-export const iconObjectSchema = z.union([textIconSchema, imageIconSchema]);
+export const iconObjectSchema = imageIconSchema;

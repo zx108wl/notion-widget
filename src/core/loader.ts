@@ -1,6 +1,11 @@
 import { createAsyncCache } from "./cache/async-cache.js";
 import { createRequestCache } from "./cache/request-cache.js";
-import { resolveFields, validateConfig, widgetMetadata } from "./schema/widget-config.schema.js";
+import {
+  assertWidgetConfig,
+  resolveFields,
+  widgetConfigUrl,
+  widgetMetadata,
+} from "./schema/widget-config.runtime.js";
 import type { Field } from "./schema/field.schema.js";
 import type { WidgetConfig } from "./schema/widget-config.schema.js";
 import type { WidgetIcon } from "./schema/icon.schema.js";
@@ -12,6 +17,7 @@ export interface WidgetMeta {
   summary: string;
   description: string;
   version: string;
+  defaultSize?: { width: number; height: number };
   config: string;
   js: string;
   css: string[];
@@ -30,20 +36,21 @@ const definitions = createRequestCache<WidgetConfig>(async (url, signal) => {
   return response.json();
 });
 
-export function getWidgetsCatalog(): Record<string, { id: string }> {
-  // 由调用方注入
-  return {};
-}
-
 export async function loadDefinition(
   widgetsCatalog: Record<string, WidgetMeta>,
   widgetId: string,
   signal?: AbortSignal,
 ): Promise<DefinitionResult> {
   if (!Object.hasOwn(widgetsCatalog, widgetId)) throw new Error("组件不存在");
-  const definition = await definitions.get(widgetsCatalog[widgetId].config, signal);
-  validateConfig(definition, widgetId);
+  const definition = await definitions.get(widgetConfigUrl(widgetId), signal);
+  assertWidgetConfig(definition, widgetId);
   return { config: definition, fields: resolveFields(definition) };
+}
+
+// 与清单并行发起的配置预取：配置路径由约定确定，无需等待清单返回，
+// 后续 loadDefinition 命中同一请求缓存即可，省掉一次串行往返
+export function prefetchDefinition(widgetId: string): Promise<unknown> {
+  return definitions.get(widgetConfigUrl(widgetId)).catch(() => undefined);
 }
 
 export async function loadWidgetDefinition(
@@ -51,14 +58,6 @@ export async function loadWidgetDefinition(
   widgetId: string,
   signal?: AbortSignal,
 ): Promise<DefinitionResult> {
-  if (window.parent !== window) {
-    try {
-      const parentGet = (window.parent as unknown as { __widgetGetDefinition?: typeof loadDefinition }).__widgetGetDefinition;
-      if (parentGet) return await parentGet(widgetsCatalog, widgetId, signal);
-    } catch (error) {
-      if ((error as Error).name !== "SecurityError") throw error;
-    }
-  }
   return loadDefinition(widgetsCatalog, widgetId, signal);
 }
 
@@ -81,8 +80,12 @@ export function loadManifest(): Promise<Record<string, WidgetMeta>> {
 
 export function loadModule(widgetId: string, entry: WidgetMeta): Promise<unknown> {
   return modules.get(widgetId, async () => {
-    await Promise.all((entry.css || []).map(loadStylesheet));
-    return import(/* @vite-ignore */ entry.js);
+    // 样式与入口模块并发加载：若串行等待 <link> 载完再 import 会多一次串行往返
+    const [module] = await Promise.all([
+      import(/* @vite-ignore */ entry.js),
+      ...(entry.css || []).map(loadStylesheet),
+    ]);
+    return module;
   });
 }
 

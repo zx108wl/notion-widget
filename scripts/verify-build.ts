@@ -1,17 +1,43 @@
 import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { resolveFields, widgetMetadata } from "../src/core/schema/widget-config.schema.js";
-import { widgets } from "../src/core/registry.js";
+import { resolveFields, widgetMetadata } from "../src/core/schema/widget-config.runtime.js";
+import { isReservedRoute, parseRouteKey } from "../src/core/schema/widget-server.schema.js";
+import { getWidgets } from "../src/core/registry.js";
 
 const root = path.resolve(import.meta.dirname, "..");
 const dist = path.join(root, "dist");
 const manifest = JSON.parse(await readFile(path.join(dist, "widgets", "manifest.json"), "utf8"));
-const registeredIds = Object.keys(widgets).sort();
+const registeredIds = Object.keys(getWidgets()).sort();
 const builtIds = Object.keys(manifest).sort();
 
 if (JSON.stringify(registeredIds) !== JSON.stringify(builtIds)) {
   throw new Error(`组件清单与注册表不一致：注册 ${registeredIds.join(", ")}，构建 ${builtIds.join(", ")}`);
+}
+
+// 服务端模块的构建产物与路由声明：不 import 产物（构建期已用子进程校验过，
+// 这里再 import 会让 verify 被插件的顶层副作用挂住）
+const routeOwners = new Map<string, string>();
+for (const widgetId of registeredIds) {
+  const sourceConfig = JSON.parse(await readFile(path.join(root, "widgets", widgetId, "config.json"), "utf8"));
+  const publishedConfig = JSON.parse(await readFile(path.join(dist, "widgets", widgetId, "config.json"), "utf8"));
+
+  // 发布产物必须与"未声明服务端模块"时完全一致
+  if (Object.hasOwn(publishedConfig, "server")) {
+    throw new Error(`组件 ${widgetId} 的发布配置不得包含 server 声明`);
+  }
+  if (!sourceConfig.server) continue;
+
+  await access(path.join(dist, "widgets", widgetId, "server.js"));
+
+  for (const key of sourceConfig.server.expose) {
+    if (!parseRouteKey(key) || isReservedRoute(key)) {
+      throw new Error(`组件 ${widgetId} 的接口声明非法或与核心保留路由冲突：${key}`);
+    }
+    const owner = routeOwners.get(key);
+    if (owner) throw new Error(`接口声明跨插件冲突：${key}（${owner} 与 ${widgetId}）`);
+    routeOwners.set(key, widgetId);
+  }
 }
 
 for (const widgetId of registeredIds) {
@@ -41,6 +67,17 @@ for (const widgetId of registeredIds) {
     if (JSON.stringify(entry[key]) !== JSON.stringify(value)) {
       throw new Error("配置元信息与清单不一致: " + widgetId + "/" + key);
     }
+  }
+
+  // 清单字段集合必须与预期一致：插件服务端化的改动不得改变前端清单结构
+  const expectedKeys = [
+    ...Object.keys(widgetMetadata(config, entry.config)),
+    "config",
+    "js",
+    "css",
+  ].sort();
+  if (JSON.stringify(expectedKeys) !== JSON.stringify(Object.keys(entry).sort())) {
+    throw new Error("清单字段集合与预期不一致: " + widgetId);
   }
 
   if (config.icon?.type === "image" && config.icon.src.startsWith("./")) {

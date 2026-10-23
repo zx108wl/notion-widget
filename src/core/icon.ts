@@ -1,46 +1,29 @@
 import { iconSchema } from "./schema/icon.schema.js";
 import type { WidgetIcon } from "./schema/icon.schema.js";
 
-export function escapeHtml(value: string): string {
-  return String(value).replace(/[&<>'"]/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "'": "&#39;",
-    '"': "&quot;",
-  })[character] as string);
-}
+const FALLBACK = "◷";
 
+// 嵌入页（DOM 版）图标渲染：图片图标统一走 <img>，加载失败回退占位符
 export function createWidgetIcon(icon: WidgetIcon): HTMLElement {
   const container = document.createElement("span");
   container.className = "widget-icon";
 
-  if (
+  // widgetMetadata 会把本地 ./ 路径解析为 /widgets/<id>/ 绝对路径，属于受信运行时路径
+  const trustedRuntimePath =
     typeof icon === "object" &&
     icon.type === "image" &&
-    typeof icon.src === "string" &&
     /^\/widgets\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_./-]+$/.test(icon.src) &&
-    !icon.src.includes("..")
-  ) {
-    return appendImage(container, icon);
+    !icon.src.includes("..");
+
+  if (!trustedRuntimePath) {
+    try {
+      iconSchema.parse(icon);
+    } catch {
+      container.textContent = FALLBACK;
+      return container;
+    }
   }
 
-  try {
-    iconSchema.parse(icon);
-  } catch {
-    container.textContent = "◷";
-    return container;
-  }
-
-  if (typeof icon === "string" || icon.type === "text") {
-    container.textContent = typeof icon === "string" ? icon : icon.value;
-    return container;
-  }
-
-  return appendImage(container, icon);
-}
-
-function appendImage(container: HTMLElement, icon: Extract<WidgetIcon, { type: "image" }>): HTMLElement {
   const image = document.createElement("img");
   image.alt = icon.alt ?? "";
   image.loading = "lazy";
@@ -48,7 +31,7 @@ function appendImage(container: HTMLElement, icon: Extract<WidgetIcon, { type: "
   image.addEventListener(
     "error",
     () => {
-      container.textContent = icon.fallback || "◷";
+      container.textContent = icon.fallback || FALLBACK;
     },
     { once: true },
   );

@@ -1,22 +1,40 @@
 import type { RollupOutput } from "rollup";
 import { publishControls } from "./widget-control-assets.js";
 import { publishIcon } from "./widget-icon-assets.js";
+import { buildWidgetServerModule } from "./widget-server-build.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import { validateConfig, widgetMetadata } from "../src/core/schema/widget-config.schema.js";
+import { validateConfig } from "../src/core/schema/widget-config.schema.js";
+import { widgetConfigUrl, widgetMetadata } from "../src/core/schema/widget-config.runtime.js";
 import type { WidgetConfig } from "../src/core/schema/widget-config.schema.js";
-import { widgets } from "../src/core/registry.js";
+import { getWidgets } from "../src/core/registry.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest: Record<string, unknown> = {};
+
+// --server-only：只编译插件服务端产物（api 镜像的构建阶段使用），不构建前端与工作台
+if (process.argv.includes("--server-only")) {
+  let count = 0;
+  for (const widget of Object.values(getWidgets())) {
+    const config = JSON.parse(
+      await readFile(path.join(root, "widgets", widget.id, "config.json"), "utf8"),
+    ) as WidgetConfig;
+    validateConfig(config, widget.id);
+    if (!config.server) continue;
+    await buildWidgetServerModule({ root, widgetId: widget.id, server: config.server });
+    count += 1;
+  }
+  console.log(`已编译 ${count} 个插件服务端模块`);
+  process.exit(0);
+}
 
 // 1. 构建工作台 + 嵌入页（多入口）
 await build({ root, configFile: path.join(root, "vite.config.ts") });
 
 // 2. 逐个构建 widget
-for (const widget of Object.values(widgets)) {
+for (const widget of Object.values(getWidgets())) {
   const config = JSON.parse(
     await readFile(path.join(root, "widgets", widget.id, "config.json"), "utf8"),
   ) as WidgetConfig;
@@ -65,6 +83,9 @@ for (const widget of Object.values(widgets)) {
       css: css.map((asset) => `./${asset.fileName.slice(prefix.length)}`),
     },
   };
+  // 服务端声明不进入公开产物：嵌入页/工作台拿到的 config 与声明前完全一致；
+  // 声明信息始终来自源 widgets/<id>/config.json（这正是"在插件配置文件中注册"）
+  delete publishedConfig.server;
 
   publishedConfig.fields = await publishControls(publishedConfig, root, path.join(root, "dist"));
   publishedConfig.icon = await publishIcon(
@@ -79,11 +100,16 @@ for (const widget of Object.values(widgets)) {
   );
 
   manifest[widget.id] = {
-    ...widgetMetadata(publishedConfig, `/widgets/${widget.id}/config.json`),
-    config: `/widgets/${widget.id}/config.json`,
+    ...widgetMetadata(publishedConfig, widgetConfigUrl(widget.id)),
+    config: widgetConfigUrl(widget.id),
     js: `/${entry.fileName}`,
     css: css.map((asset) => `/${asset.fileName}`),
   };
+
+  // 含 server 声明的插件：独立编译服务端模块，与前端产物互不 import
+  if (config.server) {
+    await buildWidgetServerModule({ root, widgetId: widget.id, server: config.server });
+  }
 }
 
 await mkdir(path.join(root, "dist", "widgets"), { recursive: true });

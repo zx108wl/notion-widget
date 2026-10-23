@@ -30,12 +30,10 @@ export function validateValue(field: Field, raw: unknown): ValidationError | nul
 
   if (field.type === "number") {
     if (!numberPattern.test(value) || !Number.isFinite(Number(value))) {
-      return fail("必须是有效数字", `建议填写 ${field.default || (field as { min?: number }).min || 0}`);
+      return fail("必须是有效数字", `建议填写 ${field.default || field.min || 0}`);
     }
     const number = Number(value);
-    const min = (field as { min?: number }).min;
-    const max = (field as { max?: number }).max;
-    const step = (field as { step?: number }).step;
+    const { min, max, step } = field;
     if ((min !== undefined && number < min) || (max !== undefined && number > max)) {
       return fail("数字超出范围", `请输入 ${min ?? "不限"} ～ ${max ?? "不限"} 的数字`);
     }
@@ -48,9 +46,8 @@ export function validateValue(field: Field, raw: unknown): ValidationError | nul
   }
 
   if (field.type === "select") {
-    const options = (field as { options: { value: string }[] }).options;
-    if (!options.some((option) => option.value === value)) {
-      return fail("不在可选项中", `可选值：${options.map((o) => o.value).join("、")}`);
+    if (!field.options.some((option) => option.value === value)) {
+      return fail("不在可选项中", `可选值：${field.options.map((o) => o.value).join("、")}`);
     }
   }
 
@@ -86,13 +83,12 @@ export function validateValue(field: Field, raw: unknown): ValidationError | nul
   }
 
   if (field.type === "text") {
-    const min = (field as { minLength?: number }).minLength ?? 0;
-    const max = (field as { maxLength?: number }).maxLength ?? 120;
+    const min = field.minLength ?? 0;
+    const max = field.maxLength ?? 120;
     if (value.length < min || value.length > max) {
       return fail("文字长度不符合限制", `请输入 ${min} ～ ${max} 个字符`);
     }
-    const pattern = (field as { pattern?: string }).pattern;
-    const patternMessage = (field as { patternMessage?: string }).patternMessage;
+    const { pattern, patternMessage } = field;
     if (pattern && !new RegExp(`^(?:${pattern})$`, "u").test(value)) {
       return fail("文字格式不符合要求", patternMessage || `请符合格式：${pattern}`);
     }

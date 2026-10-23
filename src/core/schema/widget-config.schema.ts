@@ -2,6 +2,12 @@ import { z } from "zod";
 import { fieldSchema } from "./field.schema.js";
 import { controlCompatibility } from "./control.schema.js";
 import { iconSchema } from "./icon.schema.js";
+import {
+  CREDENTIAL_REF_RE,
+  isReservedRoute,
+  parseRouteKey,
+  widgetServerSchema,
+} from "./widget-server.schema.js";
 
 const localJsPath = /^\.\/[a-zA-Z0-9_./-]+\.(js|ts|tsx)$/;
 const localCssPath = /^\.\/[a-zA-Z0-9_./-]+\.css$/;
@@ -12,6 +18,12 @@ function isValidLocalPath(value: string): boolean {
 }
 
 const hexColor = /^#[0-9a-f]{6}$/i;
+
+// 工作台预览的默认尺寸：仅用于工作台渲染该插件时初始化视口，不影响嵌入 Notion 后的实际尺寸
+const defaultSizeSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
 
 export const fieldWithControlSchema = fieldSchema.superRefine((field, ctx) => {
   const control = field.control;
@@ -24,14 +36,13 @@ export const fieldWithControlSchema = fieldSchema.superRefine((field, ctx) => {
         path: ["control", "type"],
       });
     }
-    if (control.type === "slider") {
-      const f = field as { min?: number; max?: number };
+    if (control.type === "slider" && field.type === "number") {
       if (
-        f.min === undefined ||
-        f.max === undefined ||
-        !Number.isFinite(f.min) ||
-        !Number.isFinite(f.max) ||
-        f.min === f.max
+        field.min === undefined ||
+        field.max === undefined ||
+        !Number.isFinite(field.min) ||
+        !Number.isFinite(field.max) ||
+        field.min === field.max
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -57,6 +68,9 @@ export const widgetConfigSchema = z
       js: z.string(),
       css: z.array(z.string()),
     }),
+    // 可选的服务端模块声明：缺省时行为与不声明完全一致（schemaVersion 1 向后兼容）
+    server: widgetServerSchema.optional(),
+    defaultSize: defaultSizeSchema.optional(),
     fields: z.array(fieldWithControlSchema),
   })
   .superRefine((config, ctx) => {
@@ -78,6 +92,75 @@ export const widgetConfigSchema = z
       }
     });
 
+    // 服务端模块声明校验：只登记白名单接口，未声明的一律不暴露
+    if (config.server) {
+      if (!localJsPath.test(config.server.entry) || !isValidLocalPath(config.server.entry)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "server.entry 必须是相对 .js/.ts 路径",
+          path: ["server", "entry"],
+        });
+      }
+      if (config.server.expose.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "server.expose 至少要声明一个接口",
+          path: ["server", "expose"],
+        });
+      }
+      const routes = new Set<string>();
+      config.server.expose.forEach((key, index) => {
+        const parsed = parseRouteKey(key);
+        if (!parsed) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `接口声明不合法: ${key}（需形如 "GET /api/xxx"，且为静态路径）`,
+            path: ["server", "expose", index],
+          });
+        } else if (isReservedRoute(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `接口声明与核心保留路由冲突: ${key}`,
+            path: ["server", "expose", index],
+          });
+        }
+        if (routes.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `接口声明重复: ${key}`,
+            path: ["server", "expose", index],
+          });
+        }
+        routes.add(key);
+      });
+      const credentials = new Set<string>();
+      (config.server.credentials ?? []).forEach((item, index) => {
+        const ref = typeof item === "string" ? item : item.ref;
+        if (!CREDENTIAL_REF_RE.test(ref)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `凭据声明不合法: ${ref}（需形如 "provider.slot"）`,
+            path: ["server", "credentials", index],
+          });
+        } else if (credentials.has(ref)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `凭据声明重复: ${ref}`,
+            path: ["server", "credentials", index],
+          });
+        }
+        credentials.add(ref);
+      });
+      // 声明凭据的接口必须是 auth: "token"：否则匿名请求也能读到第三方密钥
+      if (credentials.size > 0 && config.server.auth !== "token") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '声明了 credentials 的插件必须同时声明 auth: "token"',
+          path: ["server", "auth"],
+        });
+      }
+    }
+
     // 字段 key 去重
     const keys = new Set<string>();
     config.fields.forEach((field, index) => {
@@ -95,8 +178,8 @@ export const widgetConfigSchema = z
     config.fields.forEach((field, index) => {
       const path = ["fields", index] as const;
       if (field.type === "number") {
-        const f = field as { min?: number; max?: number; step?: number };
-        if (f.min !== undefined && f.max !== undefined && f.min > f.max) {
+        const { min, max, step } = field;
+        if (min !== undefined && max !== undefined && min > max) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "min 不能大于 max",
@@ -112,16 +195,16 @@ export const widgetConfigSchema = z
               path: [...path, "default"],
             });
           } else if (
-            (f.min !== undefined && n < f.min) ||
-            (f.max !== undefined && n > f.max)
+            (min !== undefined && n < min) ||
+            (max !== undefined && n > max)
           ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: "number 默认值超出范围",
               path: [...path, "default"],
             });
-          } else if (f.step !== undefined) {
-            const offset = (n - (f.min ?? 0)) / f.step;
+          } else if (step !== undefined) {
+            const offset = (n - (min ?? 0)) / step;
             if (Math.abs(offset - Math.round(offset)) > 1e-7 * Math.max(1, Math.abs(offset))) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
@@ -133,8 +216,7 @@ export const widgetConfigSchema = z
         }
       }
       if (field.type === "select") {
-        const f = field as { options: { value: string; label: string }[] };
-        const values = f.options.map((o) => o.value);
+        const values = field.options.map((o) => o.value);
         if (new Set(values).size !== values.length) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -169,7 +251,7 @@ export const widgetConfigSchema = z
         }
       }
       if (field.type === "datetime-local") {
-        const dv = (field as { defaultValue?: { kind: string; days: number } }).defaultValue;
+        const dv = field.defaultValue;
         if (dv) {
           if (dv.kind !== "relative-date" || !Number.isFinite(dv.days) || Math.abs(dv.days) > 36500) {
             ctx.addIssue({
@@ -191,35 +273,4 @@ export function validateConfig(config: unknown, widgetId: string): WidgetConfig 
     throw new Error(`配置 id 不匹配: 期望 ${widgetId}, 实际 ${parsed.id}`);
   }
   return parsed;
-}
-
-export function resolveFields(config: WidgetConfig, now: Date = new Date()): FieldWithControl[] {
-  return config.fields.map((field) => {
-    if (field.type !== "datetime-local") return { ...field };
-    const dv = (field as { defaultValue?: { kind: string; days: number } }).defaultValue;
-    if (!dv) return { ...field };
-    const date = new Date(now);
-    date.setDate(date.getDate() + dv.days);
-    date.setSeconds(0, 0);
-    const value = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
-    return { ...field, default: value };
-  });
-}
-
-export function widgetMetadata(config: WidgetConfig, configUrl: string) {
-  const { id, name, icon, summary, description, version } = config;
-  let resolvedIcon = icon;
-  if (
-    typeof icon === "object" &&
-    icon.type === "image" &&
-    /^\.\/[a-zA-Z0-9_./-]+$/.test(icon.src)
-  ) {
-    resolvedIcon = {
-      ...icon,
-      src: new URL(icon.src, new URL(configUrl, "https://widget.invalid")).pathname,
-    };
-  }
-  return { id, name, icon: resolvedIcon, summary, description, version };
 }

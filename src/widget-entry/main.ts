@@ -5,6 +5,7 @@ import {
   loadManifest,
   loadWidgetDefinition,
   loadModule,
+  prefetchDefinition,
   type WidgetMeta,
 } from "../core/loader.js";
 import { validateValues, parseParams } from "../core/validation/index.js";
@@ -13,6 +14,13 @@ import type { Field } from "../core/schema/field.schema.js";
 
 const app = document.querySelector("#app")!;
 const widgetMatch = window.location.pathname.match(/^\/widget\/([^/]+)\/?$/);
+
+// 嵌入令牌放 URL fragment（`#t=<id>.<secret>`）：fragment 不发送给服务端，
+// 因此不进 nginx access log、也不进 Referer；放 query 会两处都进
+const authToken = (() => {
+  const raw = window.location.hash.slice(1);
+  return (raw ? new URLSearchParams(raw).get("t") : null) || undefined;
+})();
 
 let widgets: Record<string, WidgetMeta> = {};
 
@@ -27,9 +35,17 @@ async function initialize(): Promise<void> {
         /* Cross-origin embedding loads its own catalog. */
       }
     }
-    if (!Object.keys(widgets).length) widgets = await loadManifest();
-    if (widgetMatch) {
-      await renderWidget(decodeURIComponent(widgetMatch[1]));
+    const widgetId = widgetMatch ? decodeURIComponent(widgetMatch[1]) : null;
+    if (!Object.keys(widgets).length) {
+      // 清单与该插件的配置并行加载：配置路径由约定确定，无需等清单返回，省掉一次串行往返
+      const [catalog] = await Promise.all([
+        loadManifest(),
+        widgetId ? prefetchDefinition(widgetId) : Promise.resolve(),
+      ]);
+      widgets = catalog;
+    }
+    if (widgetId) {
+      await renderWidget(widgetId);
     }
   } catch (error) {
     console.error(error);
@@ -88,6 +104,7 @@ async function renderWidget(widgetId: string): Promise<void> {
         loadModule(widgetId, widgets[widgetId]).then((mod) => mod as WidgetModule),
       showErrors: (errors) => renderErrors(errors as unknown as ValidationError[], widgetId),
       showFailure: renderFailure,
+      authToken,
     });
 
     renderConfig(parsed.config);

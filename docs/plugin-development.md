@@ -71,7 +71,7 @@ src/
   "schemaVersion": 1,
   "id": "hello",
   "name": "问候卡片",
-  "icon": "👋",
+  "icon": { "type": "image", "src": "./icon.svg", "alt": "问候卡片", "fallback": "👋" },
   "summary": "自定义问候语",
   "description": "展示标题和问候语，支持主题、强调色和自适应尺寸。",
   "version": "0.1.0",
@@ -142,7 +142,7 @@ export function render(root, config) {
 
 ```js
 export const widgets = Object.fromEntries(
-  ["clock", "countdown", "status", "hello"].map(id => [id, { id }]),
+  ["clock", "status", "hello"].map(id => [id, { id }]),
 );
 ```
 
@@ -189,15 +189,7 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 
 ### 图标配置
 
-兼容已有文本或 Emoji 字符串，也支持显式文本对象：
-
-```json
-"icon": "👋"
-```
-
-```json
-"icon": { "type": "text", "value": "◷" }
-```
+插件图标统一为图片对象，工作台与嵌入页共用同一 `<img>` 渲染路径。
 
 本地 PNG、JPG/JPEG、GIF、WebP、AVIF、SVG 或 ICO：
 
@@ -211,7 +203,7 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 "icon": { "type": "image", "src": "https://example.com/icon.png", "fallback": "👋" }
 ```
 
-上面的片段是 `config.json` 内的属性，不是独立 JSON 文档。图片对象的 `alt` 和 `fallback` 是可选字符串；alt 默认空字符串，图片失败时显示 fallback，未配置或为空时显示 ◷。文本对象的 value 必须为非空字符串。图标库名称和内联 SVG/HTML 不在当前协议内。
+上面的片段是 `config.json` 内的属性，不是独立 JSON 文档。图片对象的 `alt` 和 `fallback` 是可选字符串；alt 默认空字符串，图片失败时显示 fallback，未配置或为空时显示 ◷。文本、Emoji、图标库名称和内联 SVG/HTML 不在当前协议内。
 
 本地 src 相对于 config.json，须以 ./ 开头，不允许 ../、绝对路径、空格或查询参数。文件必须存在。构建器自动将图标发布为 `assets/icon-[hash].扩展名`，并更新发布配置与清单；该图标无需代码引用，也不会内联。远程图片由浏览器加载，构建时不下载、不复制；HTTPS 页面建议使用 HTTPS 图片地址。
 

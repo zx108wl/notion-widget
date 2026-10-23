@@ -1,10 +1,13 @@
 export interface WidgetRenderOptions {
   signal: AbortSignal;
+  /** 嵌入令牌（来自 URL fragment 的 `#t=...`）；无令牌时为 undefined，插件自行决定是否带 Authorization 头 */
+  authToken?: string;
 }
 
 export interface WidgetUpdateOptions {
   signal: AbortSignal;
   lifetimeSignal: AbortSignal;
+  authToken?: string;
 }
 
 export interface WidgetInstance {
@@ -28,6 +31,8 @@ export interface WidgetRuntimeOptions {
   validate: (config: Record<string, string>) => { reason: string }[];
   showErrors: (errors: { reason: string }[]) => void;
   showFailure: (error: Error) => void;
+  /** 宿主从 URL fragment 读出的嵌入令牌，原样交给插件 */
+  authToken?: string;
 }
 
 export interface WidgetRuntime {
@@ -36,7 +41,7 @@ export interface WidgetRuntime {
 }
 
 export function createWidgetRuntime(options: WidgetRuntimeOptions): WidgetRuntime {
-  const { root, loadModule, validate, showErrors, showFailure } = options;
+  const { root, loadModule, validate, showErrors, showFailure, authToken } = options;
   let version = 0;
   let controller: AbortController | undefined;
   let updateController: AbortController | undefined;
@@ -76,7 +81,11 @@ export function createWidgetRuntime(options: WidgetRuntimeOptions): WidgetRuntim
         updateQueue = updateQueue.then(async () => {
           if (disposed || current !== version || nextUpdate.signal.aborted || instance !== target) return;
           try {
-            await target.update!(config, { signal: nextUpdate.signal, lifetimeSignal: controller!.signal });
+            await target.update!(config, {
+              signal: nextUpdate.signal,
+              lifetimeSignal: controller!.signal,
+              authToken,
+            });
           } catch (error) {
             if (!nextUpdate.signal.aborted && current === version) {
               clear();
@@ -93,7 +102,7 @@ export function createWidgetRuntime(options: WidgetRuntimeOptions): WidgetRuntim
       try {
         const module = await loadModule();
         if (signal.aborted || disposed || current !== version) return;
-        const result = await module.render(root, config, { signal });
+        const result = await module.render(root, config, { signal, authToken });
         if (signal.aborted || disposed || current !== version) {
           if (typeof result === "function") result();
           else result?.destroy?.();
