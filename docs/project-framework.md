@@ -185,6 +185,30 @@ npm run check
 
 安全响应头：工作台页面带 `X-Frame-Options: SAMEORIGIN` 与 `frame-ancestors 'none'`；`/widget.html` 与 `/widget/` 不设置这两项，保证嵌入页仍能被 Notion iframe 引用。静态资源与接口统一带 `X-Content-Type-Options: nosniff`，HSTS 由终止 TLS 的 1Panel 层下发。
 
+### 数据备份与恢复
+
+数据库在 Docker 命名卷 `widget-data` 里，加密主密钥在服务器 `.env` 的 `WIDGET_DB_KEY`。两者必须分开放：只有库没有主密钥，所有第三方密钥都无法解密，等于全部丢失。
+
+备份时先做一致性快照再拷出，避免直接拷到 WAL 中的半写状态：
+
+```bash
+docker compose exec api node --input-type=module -e "import { DatabaseSync } from 'node:sqlite'; new DatabaseSync('/data/widget.db').exec(\"VACUUM INTO '/data/snapshot.db'\")"
+docker compose cp api:/data/snapshot.db ./widget-$(date +%F).db
+docker compose exec api rm /data/snapshot.db
+```
+
+`WIDGET_DB_KEY` 另存到密码管理器或离线介质，不要和数据库放在同一台机器、同一个备份包里。
+
+恢复：`docker compose stop api` 后用备份覆盖卷内 `/data/widget.db`，删除残留的 `widget.db-wal` / `widget.db-shm`，再 `docker compose start api`。恢复流程先在测试环境演练一次。
+
+### 单实例约束
+
+SQLite 文件库决定了只能跑一个 api 实例：不要给 api 配多副本（`deploy.replicas`），多个进程写同一个库会互相阻塞。需要水平扩展时，应先把存储换成独立数据库。
+
+### 升级提示：IP 语义变化
+
+从只信任 `X-Real-IP` 的版本开始，调用记录里的 IP 才是真实来源。升级前记录的 IP 可能来自被伪造的 `X-Forwarded-For`，旧的黑名单条目建议在「访问令牌 → 查看」里核对，必要时解除后按新记录重新添加。
+
 ## GitHub 推送部署
 
 `.github/workflows/deploy.yml` 会在 `main` 分支更新后检查构建、同步代码，并在服务器执行 `docker compose up -d --build`。
