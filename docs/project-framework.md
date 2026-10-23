@@ -69,7 +69,7 @@ dist/
   "clock": {
     "id": "clock",
     "name": "日期时钟",
-    "icon": "◷",
+    "icon": { "type": "image", "src": "/widgets/clock/assets/icon-示例哈希.svg" },
     "summary": "时间、日期与时区",
     "description": "插件功能说明",
     "version": "0.1.0",
@@ -151,7 +151,6 @@ https://widget.example.com/widget/{widget_id}?参数=值
 | widget_id | 组件 |
 | --- | --- |
 | `clock` | 日期时钟 |
-| `countdown` | 倒计时 |
 | `status` | API 服务状态 |
 
 日期时钟支持通过 `latitude` 和 `longitude` 参数直接设置天气坐标，例如
@@ -196,16 +195,4 @@ npm run check
 | `SSH_KNOWN_HOSTS` | `ssh-keyscan` 获取的服务器主机指纹 |
 
 服务器上的 `.env` 不会被上传或删除。部署用户需要拥有 `DEPLOY_PATH` 的写权限，并获准运行 Docker Compose。
-
-## Notion API
-
-在服务器 `.env` 中填写：
-
-```dotenv
-NOTION_TOKEN=ntn_xxx
-NOTION_PAGE_ID=xxx
-NOTION_VERSION=2025-09-03
-```
-
-前端只访问 `/api/*`。不要在 `src`、HTML、Git 仓库或 Vite 的 `VITE_*` 环境变量中保存 Notion Token。
 

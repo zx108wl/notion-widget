@@ -1,98 +1,99 @@
 import "dotenv/config";
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { openDatabase } from "./db/schema.js";
+import { readMasterKey } from "./crypto/secrets.js";
+import { ensureAdminUser } from "./auth/users.js";
+import { pruneSessions } from "./auth/session.js";
+import { pruneUsage } from "./auth/usage.js";
+import { purgeRevokedTokens } from "./auth/tokens.js";
+import { createAuthRouter } from "./routes/auth.js";
+import { createAdminRouter } from "./routes/admin.js";
+import { createPluginAuthorizer, createPluginContextFactory } from "./plugin-auth.js";
+import { createPluginDispatcher } from "./plugin-routes.js";
+import { loadPluginServers, resolvePluginServerMode } from "./plugin-loader.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const weatherCache = new Map();
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+// 主密钥只从 .env 读取：缺失/长度不对一律拒绝启动，绝不做"没有主密钥就明文存"的降级
+let masterKey;
+try {
+  masterKey = readMasterKey(process.env);
+} catch (error) {
+  console.error(`[auth] ${error.message}`);
+  process.exit(1);
+}
+
+const dbPath = process.env.WIDGET_DB_PATH || "/data/widget.db";
+const db = openDatabase({ file: dbPath });
+ensureAdminUser(db, process.env);
+pruneSessions(db);
+pruneUsage(db);
+purgeRevokedTokens(db);
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "32kb" }));
 
 app.get("/api/health", (_request, response) => {
   response.set("Cache-Control", "no-store");
-  response.json({ ok: true, time: new Date().toISOString() });
+  response.json({
+    ok: true,
+    time: new Date().toISOString(),
+    db: "ok",
+    plugins: plugins.map(({ id, routes, status }) => ({ id, routes, status })),
+  });
 });
 
-app.get("/api/weather", async (request, response) => {
-  const latitude = Number(request.query.latitude);
-  const longitude = Number(request.query.longitude);
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return response.status(400).json({ error: "请输入有效的经纬度" });
+// 插件分发器注册在核心路由之后、404 之前：核心永远优先，插件无法遮蔽核心接口
+const { table, plugins } = await loadPluginServers({ rootDir, mode: resolvePluginServerMode() });
+
+// 被插件声明依赖的凭据：删除这类密钥时给出明确错误，而不是留到运行时才抛"未配置凭据"
+const declaredCredentials = new Map();
+// 各插件对凭据的可读需求（label/description）：工作台据此告诉用户该填什么
+const widgetCredentialRequirements = new Map();
+// 插件接口是否需要访问令牌：工作台据此提示"嵌入链接需去令牌页签发"
+const widgetAuth = new Map();
+for (const entry of table.values()) {
+  for (const ref of entry.credentials ?? []) {
+    if (!declaredCredentials.has(ref)) declaredCredentials.set(ref, new Set());
+    declaredCredentials.get(ref).add(entry.widgetId);
   }
-
-  const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-  const cached = weatherCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    response.set("Cache-Control", "public, max-age=300");
-    return response.json(cached.data);
+  const list = widgetCredentialRequirements.get(entry.widgetId) ?? [];
+  for (const requirement of entry.credentialRequirements ?? []) {
+    if (!list.some((item) => item.ref === requirement.ref)) list.push(requirement);
   }
+  widgetCredentialRequirements.set(entry.widgetId, list);
+  // 同一插件可能暴露多条路由：只要有一条要求令牌，整个插件的嵌入页就需要令牌
+  if (entry.auth === "token") widgetAuth.set(entry.widgetId, "token");
+  else if (!widgetAuth.has(entry.widgetId)) widgetAuth.set(entry.widgetId, "none");
+}
 
-  try {
-    const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
-    forecastUrl.search = new URLSearchParams({
-      latitude: String(latitude),
-      longitude: String(longitude),
-      current: "temperature_2m,apparent_temperature,weather_code,is_day",
-      timezone: "auto",
-    });
-    const forecastResponse = await fetch(forecastUrl, { signal: AbortSignal.timeout(8_000) });
-    if (!forecastResponse.ok) throw new Error(`天气服务返回 HTTP ${forecastResponse.status}`);
-    const forecast = await forecastResponse.json();
-    if (!forecast.current) throw new Error("天气服务没有返回当前数据");
+// 用户系统与密钥托管挂在分发器之前：/api/auth/* 与 /api/admin/* 是核心保留前缀
+app.use("/api/auth", createAuthRouter({ db }));
+app.use(
+  "/api/admin",
+  createAdminRouter({ db, key: masterKey, declaredCredentials, widgetCredentialRequirements, widgetAuth }),
+);
 
-    const data = {
-      latitude,
-      longitude,
-      temperature: forecast.current.temperature_2m,
-      apparentTemperature: forecast.current.apparent_temperature,
-      weatherCode: forecast.current.weather_code,
-      isDay: forecast.current.is_day === 1,
-      unit: forecast.current_units?.temperature_2m || "°C",
-      observedAt: forecast.current.time,
-    };
-    weatherCache.set(cacheKey, { data, expiresAt: Date.now() + 10 * 60_000 });
-    response.set("Cache-Control", "public, max-age=300");
-    return response.json(data);
-  } catch (error) {
-    return response.status(502).json({
-      error: "天气服务请求失败",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-});
-
-app.get("/api/notion/page", async (_request, response) => {
-  const token = process.env.NOTION_TOKEN;
-  const pageId = process.env.NOTION_PAGE_ID;
-
-  if (!token || !pageId) {
-    return response.status(503).json({
-      error: "Notion API 尚未配置",
-    });
-  }
-
-  try {
-    const upstream = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Notion-Version": process.env.NOTION_VERSION || "2025-09-03",
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-
-    const data = await upstream.json();
-    response.set("Cache-Control", "private, max-age=30");
-    return response.status(upstream.status).json(data);
-  } catch (error) {
-    return response.status(502).json({
-      error: "Notion API 请求失败",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-});
+app.use(
+  createPluginDispatcher({
+    table,
+    authorize: createPluginAuthorizer({ db }),
+    createContext: createPluginContextFactory({ db, key: masterKey }),
+  }),
+);
 
 app.use((_request, response) => {
   response.status(404).json({ error: "Not found" });
+});
+
+// JSON 错误处理器必须是最后一个中间件，且必须带 4 个参数（否则 express 不会当作错误处理器）
+app.use((error, _request, response, _next) => {
+  console.error("[api] 未处理的错误:", error);
+  response.status(500).json({ error: "服务器内部错误" });
 });
 
 app.listen(port, "0.0.0.0", () => {

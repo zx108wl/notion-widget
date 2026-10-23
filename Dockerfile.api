@@ -1,17 +1,42 @@
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json vite.config.ts ./
+COPY src ./src
+COPY scripts ./scripts
+COPY widgets ./widgets
+
+# 只编译插件服务端产物（前端与工作台由 web 镜像构建），并整理出运行期需要的插件声明
+RUN npm run build:server \
+ && mkdir -p /runtime/widgets \
+ && for config in widgets/*/config.json; do \
+      id=$(basename "$(dirname "$config")"); \
+      mkdir -p "/runtime/widgets/$id"; \
+      cp "$config" "/runtime/widgets/$id/config.json"; \
+    done
+
 FROM node:22-alpine
 
 WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY server ./server
+# 声明始终来自源 widgets/<id>/config.json（发布产物里已被剥离），故单独复制
+COPY --from=builder /runtime/widgets ./widgets
+# 服务端产物（含可能的 server-chunks），前端资源不进入 api 镜像
+COPY --from=builder /app/dist/widgets ./dist/widgets
 
-ENV NODE_ENV=production
-ENV PORT=3000
+# 数据库目录：绝不 COPY 任何数据库文件进来，只建目录并把属主交给运行用户 node，
+# 这样挂载命名卷后写入权限正确（数据由卷持久化，跨"整镜像替换"存活）
+RUN mkdir -p /data && chown node:node /data
 
 USER node
 EXPOSE 3000
 
 CMD ["node", "server/index.js"]
-

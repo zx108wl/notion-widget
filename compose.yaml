@@ -6,6 +6,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # 数据库落在命名卷里：整体替换镜像文件时数据不丢（.env 留在宿主机同理）
+      WIDGET_DB_PATH: /data/widget.db
+    volumes:
+      - widget-data:/data
     networks:
       - widget
 
@@ -23,3 +28,6 @@ services:
 
 networks:
   widget:
+
+volumes:
+  widget-data:
