@@ -1,54 +1,58 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Input, Modal, Popconfirm, Space, Tooltip, Typography } from "antd";
+import { Button, Input, InputNumber, Modal, Popconfirm, Space, Tooltip, Typography } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Field } from "../../core/schema/field.schema.js";
-import { validateValues } from "../../core/validation/index.js";
+import type { ResolvedTheme } from "../useTheme.js";
+import { api } from "../api.js";
+import { useWidgetPreview } from "../hooks/useWidgetPreview.js";
+import { useViewportPresets } from "../hooks/useViewportPresets.js";
 
 interface PreviewPanelProps {
   widgetId: string | null;
   fields: Field[];
   values: Record<string, string>;
+  resolvedTheme: ResolvedTheme;
+  defaultSize?: { width: number; height: number };
 }
 
-interface Preset {
-  label: string;
-  width: number;
-  height: number;
-}
-
-const STORAGE_KEY = "notion-widget:view-presets";
-
-function loadPresets(): Preset[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function savePresets(presets: Preset[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
-}
-
-export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+export function PreviewPanel({ widgetId, fields, values, resolvedTheme, defaultSize }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const [url, setUrl] = useState("");
-  const [copyText, setCopyText] = useState("");
-  const previewIdRef = useRef<string | null>(null);
-  const readyIdRef = useRef<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { url, message, messageType, iframeRef } = useWidgetPreview(widgetId, fields, values, resolvedTheme);
+  const { presets, savePreset, deletePreset } = useViewportPresets();
 
-  const [viewWidth, setViewWidth] = useState(375);
-  const [viewHeight, setViewHeight] = useState(300);
+  const [viewWidth, setViewWidth] = useState(defaultSize?.width ?? 375);
+  const [viewHeight, setViewHeight] = useState(defaultSize?.height ?? 300);
   const [fitScale, setFitScale] = useState(1);
-  const [presets, setPresets] = useState<Preset[]>(() => loadPresets());
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
+  const [copyText, setCopyText] = useState("");
+  const [tokenRequired, setTokenRequired] = useState(false);
   const dragRef = useRef<{ handle: "e" | "s" | "se"; startX: number; startY: number; startW: number; startH: number } | null>(null);
+
+  // 需要令牌的插件：嵌入链接由令牌页签发并复制，工作台不再保存/回显令牌明文
+  useEffect(() => {
+    setTokenRequired(false);
+    if (!widgetId) return;
+    let cancelled = false;
+    api
+      .listWidgetMeta()
+      .then((meta) => {
+        if (!cancelled) setTokenRequired(meta.auth[widgetId] === "token");
+      })
+      .catch(() => {
+        if (!cancelled) setTokenRequired(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [widgetId]);
+
+  // 切换插件时按插件配置的默认尺寸初始化视口
+  useEffect(() => {
+    if (!defaultSize) return;
+    setViewWidth(defaultSize.width);
+    setViewHeight(defaultSize.height);
+  }, [widgetId, defaultSize]);
 
   // 计算缩放比例，让视口适配预览区域
   useEffect(() => {
@@ -67,123 +71,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
     return () => ro.disconnect();
   }, [viewWidth, viewHeight]);
 
-  // 生成 URL 并更新预览
-  useEffect(() => {
-    if (!widgetId || !fields.length) return;
-
-    const errors = validateValues(fields, values);
-    if (errors.length) {
-      setUrl("");
-      setCopyText("请修正参数后再更新预览。");
-      return;
-    }
-
-    const params = new URLSearchParams();
-    fields.forEach((field) => {
-      if (values[field.key] !== field.default || (field as { defaultValue?: unknown }).defaultValue) {
-        params.set(field.key, values[field.key]);
-      }
-    });
-    const query = params.toString();
-    const generatedUrl = `${window.location.origin}/widget/${widgetId}${query ? `?${query}` : ""}`;
-    setUrl(generatedUrl);
-    setCopyText("");
-
-    const snapshot = { ...values };
-    const id = widgetId;
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      const iframe = iframeRef.current;
-      if (!iframe) return;
-      if (previewIdRef.current === id && readyIdRef.current === id) {
-        iframe.contentWindow?.postMessage(
-          { type: "widget-config", id, values: snapshot },
-          window.location.origin,
-        );
-      } else if (previewIdRef.current !== id) {
-        previewIdRef.current = id;
-        iframe.src = generatedUrl;
-      }
-    }, 250);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [widgetId, fields, values]);
-
-  // 监听 widget-ready 消息
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (
-        event.origin !== window.location.origin ||
-        event.source !== iframeRef.current?.contentWindow ||
-        event.data?.type !== "widget-ready" ||
-        event.data.id !== widgetId
-      ) {
-        return;
-      }
-      readyIdRef.current = event.data.id;
-      const errors = validateValues(fields, values);
-      if (!errors.length) {
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: "widget-config", id: widgetId, values },
-          window.location.origin,
-        );
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [widgetId, fields, values]);
-
-  // 切换 widget 时重置 iframe
-  useEffect(() => {
-    previewIdRef.current = null;
-    readyIdRef.current = null;
-    if (iframeRef.current) iframeRef.current.src = "about:blank";
-  }, [widgetId]);
-
-  const handleCopy = async () => {
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopyText("已复制，可粘贴到 Notion 的 /embed 中。");
-    } catch {
-      setCopyText("请使用 Ctrl+C 复制。");
-    }
-  };
-
-  const handleOpen = () => {
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const applyPreset = (w: number, h: number) => {
-    setViewWidth(w);
-    setViewHeight(h);
-  };
-
-  const handleSavePreset = () => {
-    const name = presetName.trim();
-    if (!name) return;
-    const next = [...presets, { label: name, width: viewWidth, height: viewHeight }];
-    setPresets(next);
-    savePresets(next);
-    setPresetName("");
-    setSaveModalOpen(false);
-  };
-
-  const handleDeletePreset = (label: string) => {
-    const next = presets.filter((p) => p.label !== label);
-    setPresets(next);
-    savePresets(next);
-  };
-
   // 拖拽调整视口尺寸
-  const startDrag = (handle: "e" | "s" | "se") => (e: React.MouseEvent) => {
-    e.preventDefault();
-    dragRef.current = { handle, startX: e.clientX, startY: e.clientY, startW: viewWidth, startH: viewHeight };
-  };
-
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const drag = dragRef.current;
@@ -198,7 +86,9 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         setViewHeight(Math.max(1, Math.round(drag.startH + dy)));
       }
     };
-    const onUp = () => { dragRef.current = null; };
+    const onUp = () => {
+      dragRef.current = null;
+    };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => {
@@ -207,8 +97,58 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
     };
   }, [fitScale]);
 
+  const handleCopy = async () => {
+    if (!url) return;
+    if (tokenRequired) {
+      setCopyText("该插件需要访问令牌：请在右侧「签发令牌」选项卡签发，并复制生成的完整嵌入链接。");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyText("已复制，可粘贴到 Notion 的 /embed 中。");
+    } catch {
+      setCopyText("请使用 Ctrl+C 复制。");
+    }
+  };
+
+  const handleSavePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    savePreset(name, viewWidth, viewHeight);
+    setPresetName("");
+    setSaveModalOpen(false);
+  };
+
+  const startDrag = (handle: "e" | "s" | "se") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { handle, startX: e.clientX, startY: e.clientY, startW: viewWidth, startH: viewHeight };
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* 嵌入 URL：需要令牌的插件在右侧「签发令牌」选项卡签发完整链接 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <Typography.Text strong style={{ whiteSpace: "nowrap" }}>嵌入 URL</Typography.Text>
+        <Space.Compact style={{ flex: 1 }}>
+          <Input value={url} readOnly placeholder="参数校验通过后自动生成" />
+          <Button type="primary" onClick={handleCopy} disabled={!url}>复制 URL</Button>
+        </Space.Compact>
+      </div>
+      <div style={{ minHeight: 22, marginBottom: 4 }}>
+        {message ? (
+          <Typography.Text type={messageType === "warning" ? "warning" : "success"} style={{ fontSize: 12 }}>
+            {message}
+          </Typography.Text>
+        ) : copyText ? (
+          <Typography.Text type={tokenRequired ? "warning" : "success"} style={{ fontSize: 12 }}>
+            {copyText}
+          </Typography.Text>
+        ) : tokenRequired ? (
+          <Typography.Text type="warning" style={{ fontSize: 12 }}>
+            该插件接口需要访问令牌：请在右侧「签发令牌」选项卡签发，并复制生成的完整嵌入链接。
+          </Typography.Text>
+        ) : null}
+      </div>
 
       {/* 设备尺寸工具栏 */}
       <div
@@ -218,35 +158,28 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
           gap: 8,
           marginBottom: 12,
           padding: "10px 12px",
-          background: "var(--bg-sider)",
-          border: "1px solid var(--border-color)",
+          background: "var(--ant-color-fill-quaternary, #fafafa)",
+          border: "1px solid var(--ant-color-border-secondary, #f0f0f0)",
           borderRadius: 10,
           flexWrap: "wrap",
         }}
       >
         <Typography.Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>视口尺寸</Typography.Text>
         <Space.Compact size="small">
-          <Input
+          <InputNumber
             value={viewWidth}
-            type="number"
             min={1}
-            style={{ width: 72, textAlign: "center" }}
-            onChange={(e) => setViewWidth(Math.max(1, Number(e.target.value) || 1))}
+            style={{ width: 72 }}
+            onChange={(v) => setViewWidth(Math.max(1, v ?? 1))}
           />
-          <Input
-            value="×"
-            disabled
-            style={{ width: 32, textAlign: "center", paddingInline: 0 }}
-          />
-          <Input
+          <InputNumber
             value={viewHeight}
-            type="number"
             min={1}
-            style={{ width: 72, textAlign: "center" }}
-            onChange={(e) => setViewHeight(Math.max(1, Number(e.target.value) || 1))}
+            style={{ width: 72 }}
+            onChange={(v) => setViewHeight(Math.max(1, v ?? 1))}
           />
         </Space.Compact>
-        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>px</span>
+        <span style={{ fontSize: 12, color: "var(--ant-color-text-tertiary, #bfbfbf)" }}>px</span>
         <div style={{ flex: 1 }} />
         {presets.map((p) => (
           <Tooltip key={p.label} title={`${p.width} × ${p.height} px`}>
@@ -254,12 +187,15 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
               <Button
                 size="small"
                 type={viewWidth === p.width && viewHeight === p.height ? "primary" : "default"}
-                onClick={() => applyPreset(p.width, p.height)}
+                onClick={() => {
+                  setViewWidth(p.width);
+                  setViewHeight(p.height);
+                }}
                 style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
               >
                 {p.label}
               </Button>
-              <Popconfirm title="删除该预设？" onConfirm={() => handleDeletePreset(p.label)} okText="删除" cancelText="取消">
+              <Popconfirm title="删除该预设？" onConfirm={() => deletePreset(p.label)} okText="删除" cancelText="取消">
                 <Button
                   size="small"
                   danger
@@ -273,7 +209,7 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => setSaveModalOpen(true)}>
           保存预设
         </Button>
-        <Button size="small" onClick={handleOpen} disabled={!url}>
+        <Button size="small" onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")} disabled={!url}>
           新窗口打开
         </Button>
       </div>
@@ -282,7 +218,10 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         title="保存视口预设"
         open={saveModalOpen}
         onOk={handleSavePreset}
-        onCancel={() => { setSaveModalOpen(false); setPresetName(""); }}
+        onCancel={() => {
+          setSaveModalOpen(false);
+          setPresetName("");
+        }}
         okText="保存"
         cancelText="取消"
       >
@@ -298,18 +237,17 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         />
       </Modal>
 
-      {/* 预览舞台：灰色背景，居中显示设备视口 */}
+      {/* 预览舞台：棋盘格背景，居中显示设备视口 */}
       <div
         ref={stageRef}
+        className="preview-stage"
         style={{
           position: "relative",
           flex: 1,
           minHeight: 280,
           overflow: "auto",
-          background: "linear-gradient(135deg, var(--stage-a) 25%, var(--stage-b) 25%, var(--stage-b) 50%, var(--stage-a) 50%, var(--stage-a) 75%, var(--stage-b) 75%)",
-          backgroundSize: "20px 20px",
-          border: "1px solid var(--border-strong)",
-          borderRadius: 14,
+          border: "1px solid var(--ant-color-border, #d9d9d9)",
+          borderRadius: 12,
           padding: 20,
           display: "flex",
           alignItems: "center",
@@ -317,14 +255,14 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
         }}
       >
         <div
+          className="preview-frame"
           style={{
             position: "relative",
             width: viewWidth * fitScale,
             height: viewHeight * fitScale,
             boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
-            borderRadius: 8,
             overflow: "hidden",
-            background: "var(--bg-page)",
+            background: "var(--ant-color-bg-container, #fff)",
           }}
         >
           <iframe
@@ -340,65 +278,34 @@ export function PreviewPanel({ widgetId, fields, values }: PreviewPanelProps) {
               pointerEvents: "none",
             }}
           />
-          {/* 拖拽手柄：右边 */}
-          <div
-            onMouseDown={startDrag("e")}
-            style={{
-              position: "absolute",
-              top: 0,
-              right: -4,
-              width: 8,
-              height: "100%",
-              cursor: "ew-resize",
-              zIndex: 10,
-            }}
-          />
-          {/* 拖拽手柄：下边 */}
-          <div
-            onMouseDown={startDrag("s")}
-            style={{
-              position: "absolute",
-              left: 0,
-              bottom: -4,
-              width: "100%",
-              height: 8,
-              cursor: "ns-resize",
-              zIndex: 10,
-            }}
-          />
-          {/* 拖拽手柄：右下角 */}
-          <div
-            onMouseDown={startDrag("se")}
-            style={{
-              position: "absolute",
-              right: -5,
-              bottom: -5,
-              width: 14,
-              height: 14,
-              cursor: "nwse-resize",
-              zIndex: 11,
-              background: "linear-gradient(135deg, transparent 50%, var(--accent) 50%)",
-              borderRadius: "0 0 8px 0",
-            }}
-          />
+          <Tooltip title="拖拽调整宽度" placement="top">
+            <div
+              onMouseDown={startDrag("e")}
+              style={{ position: "absolute", top: 0, right: -4, width: 8, height: "100%", cursor: "ew-resize", zIndex: 10 }}
+            />
+          </Tooltip>
+          <Tooltip title="拖拽调整高度" placement="right">
+            <div
+              onMouseDown={startDrag("s")}
+              style={{ position: "absolute", left: 0, bottom: -4, width: "100%", height: 8, cursor: "ns-resize", zIndex: 10 }}
+            />
+          </Tooltip>
+          <Tooltip title="拖拽调整尺寸" placement="top">
+            <div
+              onMouseDown={startDrag("se")}
+              style={{
+                position: "absolute",
+                right: -5,
+                bottom: -5,
+                width: 14,
+                height: 14,
+                cursor: "nwse-resize",
+                zIndex: 11,
+                background: "linear-gradient(135deg, transparent 50%, var(--ant-color-primary, #6c5ce7) 50%)",
+              }}
+            />
+          </Tooltip>
         </div>
-      </div>
-
-      <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
-        视口尺寸决定组件渲染宽高，可拖拽框架边缘或右下角调整；预览会自动缩放适配区域
-      </Typography.Paragraph>
-
-      <div style={{ marginTop: 16 }}>
-        <Typography.Text strong>嵌入 URL</Typography.Text>
-        <Space.Compact style={{ width: "100%", marginTop: 8 }}>
-          <Input value={url} readOnly />
-          <Button type="primary" onClick={handleCopy} disabled={!url}>复制 URL</Button>
-        </Space.Compact>
-        {copyText && (
-          <Typography.Text type={copyText.includes("修正") ? "warning" : "success"} style={{ fontSize: 12 }}>
-            {copyText}
-          </Typography.Text>
-        )}
       </div>
     </div>
   );

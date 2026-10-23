@@ -10,6 +10,9 @@ interface ConfigFormProps {
   widgetBase?: string;
 }
 
+// 受控表单：App 层集中管理 values（用于 postMessage 预览与 draft 缓存）
+// Form.Item 不用 name（避免 antd cloneElement 注入与控件自定义 onChange(string) 签名冲突），
+// 仅用其 label / validateStatus / help 提供标准校验展示
 export function ConfigForm({ fields, values, onChange, widgetBase }: ConfigFormProps) {
   const handleChange = (key: string, value: string) => {
     onChange({ ...values, [key]: value });

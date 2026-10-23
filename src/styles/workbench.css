@@ -1,44 +1,5 @@
-:root {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-  /* 浅色色板（默认） */
-  --accent: #6c5ce7;                /* 主题强调色（与 main.tsx colorPrimary 保持一致） */
-  --bg-page: #ffffff;               /* 页面/面板底色 */
-  --bg-sider: #fafafa;              /* 侧边栏底色 */
-  --bg-item: #ffffff;               /* 选中项/工具栏底色 */
-  --bg-icon: #f0f0f0;               /* 图标占位底色 */
-  --border-color: #f0f0f0;          /* 弱边框 */
-  --border-strong: #d9d9d9;         /* 强边框 */
-  --text-secondary: #8c8c8c;        /* 次要文字 */
-  --text-faint: #bfbfbf;            /* 最弱文字 */
-  --stage-a: #f0f0f0;               /* 预览棋盘格 A */
-  --stage-b: #e8e8e8;               /* 预览棋盘格 B */
-  --side-tab-border: #e7e2f6;       /* 选项卡描边 */
-  --side-tab-text-idle: #9a97a3;    /* 选项卡未选中文字 */
-  --side-accent: var(--accent);
-  --side-bar-bg: var(--bg-sider);
-  --side-tab-bg: var(--bg-item);
-}
-:root[data-theme="dark"] {
-  --accent: #8b7cf0;
-  --bg-page: #1f1f1f;
-  --bg-sider: #141414;
-  --bg-item: #262626;
-  --bg-icon: #303030;
-  --border-color: #2e2e2e;
-  --border-strong: #424242;
-  --text-secondary: rgba(255, 255, 255, 0.45);
-  --text-faint: rgba(255, 255, 255, 0.35);
-  --stage-a: #1f1f1f;
-  --stage-b: #262626;
-  --side-tab-border: #424242;
-  --side-tab-text-idle: rgba(255, 255, 255, 0.45);
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-}
-:root[data-theme="light"] {
-  color-scheme: light;
-}
+/* 工作台样式：颜色/圆角/间距全部走 antd token（var(--ant-*)），此处仅保留 antd 无对应能力的视觉 */
+
 * {
   box-sizing: border-box;
 }
@@ -48,55 +9,144 @@ body,
   margin: 0;
   min-height: 100%;
 }
-body {
-  background: var(--bg-page);
+
+/* ===== 预览舞台：棋盘格背景（antd 无对应组件） ===== */
+.preview-stage {
+  background: conic-gradient(
+    var(--ant-color-fill-tertiary, #f2f2f2) 25%,
+    var(--ant-color-fill-quaternary, #eaeaea) 0 50%,
+    var(--ant-color-fill-tertiary, #f2f2f2) 0 75%,
+    var(--ant-color-fill-quaternary, #eaeaea) 0
+  );
+  background-size: 20px 20px;
 }
 
-/* 左侧导航 Sider 标题行 */
+/* 预览视口框：外扩选框表达可缩放，hover 时强调色加深 */
+.preview-frame {
+  outline: 1px solid color-mix(in srgb, var(--ant-color-primary, #6c5ce7) 40%, transparent);
+  outline-offset: 5px;
+  transition: outline-color 0.15s;
+}
+.preview-frame:hover {
+  outline-color: var(--ant-color-primary, #6c5ce7);
+}
+
+/* ===== 左侧 Sider 标题行（搜索 + 折叠按钮） ===== */
 .sider-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 8px;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }
 .sider-title[data-collapsed="true"] {
-  flex-direction: column;
-  gap: 4px;
   justify-content: center;
-  padding: 12px 8px;
+  padding: 0;
 }
 
-/* widget icon 图片 */
-.widget-icon img {
+/* 侧栏操作按钮：与菜单图标统一的 26×26 圆角方块规格 */
+.sider-action-btn.ant-btn {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--ant-color-fill-secondary, #f0f0f0);
+  border: none;
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  font-size: 15px;
+  line-height: 1;
+  margin: 6px;
+}
+.sider-action-btn.ant-btn:hover {
+  background: var(--ant-color-border, #d9d9d9);
+  color: var(--ant-color-primary, #6c5ce7);
+}
+
+/* 菜单图标方块背景：展开态为 26×26 圆角方块 */
+.widget-icon-bg {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+  background: var(--ant-color-fill-secondary, #f0f0f0);
+}
+/* 图标（图片或线描 SVG）按 1em 尺寸渲染，与文字图标保持同一视觉规格，
+   在方块内居中并保留内留白 */
+.widget-icon-bg img,
+.widget-icon-bg > svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 1em;
+  height: 1em;
   object-fit: contain;
+  flex-shrink: 0;
+}
+/* 选中项图标方块去底色，避免与选中底色叠加发脏 */
+.ant-menu-item-selected .widget-icon-bg {
+  background: transparent;
+}
+/* 选中态左侧强调条：antd 内联菜单自带的 ::after 强调条在本版本实测渲染为 0 宽（走 activeBarWidth，
+   默认 0），故改用 inset 阴影实现，与右栏选项卡的左侧强调条语言一致；
+   仅作用于展开态，避免折叠态方块内出现异形竖条 */
+.ant-menu:not(.ant-menu-inline-collapsed) .ant-menu-item-selected {
+  box-shadow: inset 3px 0 0 var(--ant-color-primary, #6c5ce7);
 }
 
-/* 右栏选项卡状态栏：仅作背景，不可点击 */
+/* 折叠态：图标与展开态保持同一 26×26 方块规格
+   - 水平居中由 Menu token collapsedIconSize: 26 驱动（antd padding 公式），不做自定义 padding 覆盖
+   - items 渲染路径下 antd 通过 cloneElement 给图标注入 ant-menu-item-icon 类，
+     其折叠态规则（margin/font-size/line-height）随之生效，需用更高优先级统一覆盖，
+     否则裸元素图标与组件图标对齐规则不一致
+   - 折叠态菜单项退回 block + line-height 布局（antd 原生行为），图标盒子需改为 inline-flex
+     并通过 vertical-align: middle 参与行盒垂直居中，否则块级盒子会贴到菜单项顶部 */
+.ant-menu-inline-collapsed .ant-menu-title-content {
+  display: none;
+}
+.ant-menu-inline-collapsed .ant-menu-item span.widget-icon-bg {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ===== 右栏选项卡状态栏（antd 无竖排 Tabs） ===== */
 .side-bar {
   flex-shrink: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--side-bar-bg);
+  gap: 6px;
+  padding: 8px 0;
+  background: var(--ant-color-fill-quaternary, #fafafa);
   transition: background 0.2s;
 }
-/* 选项卡按钮：宽高由竖排文字决定，可点击，始终有按钮质感 */
+/* 选项卡：无论是否选中都保持按钮质感，选中态只多一条左侧内缘强调条 */
 .side-tab {
   padding: 10px 7px;
   cursor: pointer;
-  background: var(--side-tab-bg);
-  box-shadow: inset 0 0 0 1px var(--side-tab-border);
+  background: var(--ant-color-bg-container, #fff);
+  box-shadow: inset 0 0 0 1px var(--ant-color-border-secondary, #e7e2f6);
   transition: background 0.2s;
 }
-/* 选中态：强调条画在按钮内缘，高度跟随按钮 */
-.side-bar:not(.collapsed) .side-tab {
+.side-tab:hover {
+  background: var(--ant-color-fill-secondary, #f0f0f0);
+}
+.side-tab[data-active="true"] {
   box-shadow:
-    inset 0 0 0 1px var(--side-tab-border),
-    inset 3px 0 0 var(--side-accent);
+    inset 0 0 0 1px var(--ant-color-border-secondary, #e7e2f6),
+    inset 3px 0 0 var(--ant-color-primary, #6c5ce7);
 }
 .side-tab-text {
   display: inline-block;
@@ -105,22 +155,23 @@ body {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.25em;
-  color: var(--side-tab-text-idle);
+  color: var(--ant-color-text-tertiary, #9a97a3);
   user-select: none;
   transition: color 0.2s;
 }
 .side-tab:hover .side-tab-text {
-  color: var(--side-accent);
+  color: var(--ant-color-primary, #6c5ce7);
 }
-.side-bar:not(.collapsed) .side-tab-text {
-  color: var(--side-accent);
+.side-tab[data-active="true"] .side-tab-text {
+  color: var(--ant-color-primary, #6c5ce7);
   font-weight: 600;
 }
+
 /* 面板内容区 */
 .side-box {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
   padding: 16px 16px 24px;
-  background: var(--bg-page);
+  background: var(--ant-color-bg-container, #fff);
 }

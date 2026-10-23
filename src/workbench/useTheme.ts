@@ -5,29 +5,26 @@ export type ResolvedTheme = "light" | "dark";
 
 const STORAGE_KEY = "notion-widget:theme";
 
-export function loadThemeMode(): ThemeMode {
+function readStoredMode(): ThemeMode {
   const raw = localStorage.getItem(STORAGE_KEY);
   return raw === "light" || raw === "dark" ? raw : "auto";
 }
 
-export function saveThemeMode(mode: ThemeMode) {
-  localStorage.setItem(STORAGE_KEY, mode);
+function resolveMode(mode: ThemeMode, prefersDark: boolean): ResolvedTheme {
+  if (mode === "auto") return prefersDark ? "dark" : "light";
+  return mode;
 }
 
 export function useTheme() {
-  const [mode, setMode] = useState<ThemeMode>(() => loadThemeMode());
+  const [mode, setMode] = useState<ThemeMode>(() => readStoredMode());
   const [resolved, setResolved] = useState<ResolvedTheme>(() =>
-    loadThemeMode() === "dark" ||
-    (loadThemeMode() === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches)
-      ? "dark"
-      : "light",
+    resolveMode(readStoredMode(), window.matchMedia("(prefers-color-scheme: dark)").matches),
   );
 
-  // 跟随系统变化 + 同步到 <html data-theme>
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      const next: ResolvedTheme = mode === "auto" ? (media.matches ? "dark" : "light") : mode;
+      const next = resolveMode(mode, media.matches);
       setResolved(next);
       document.documentElement.dataset.theme = next;
     };
@@ -38,7 +35,7 @@ export function useTheme() {
 
   const changeMode = (next: ThemeMode) => {
     setMode(next);
-    saveThemeMode(next);
+    localStorage.setItem(STORAGE_KEY, next);
   };
 
   return { mode, resolved, changeMode };

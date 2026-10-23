@@ -2,10 +2,11 @@ import { Radio } from "antd";
 import type { ControlProps } from "./types.js";
 
 export function RadioControl({ field, value, onChange }: ControlProps) {
-  const options = (field as { options: { value: string; label: string }[] }).options;
+  // radio 控件仅兼容 select 字段
+  if (field.type !== "select") return null;
   return (
     <Radio.Group value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map((opt) => (
+      {field.options.map((opt) => (
         <Radio key={opt.value} value={opt.value}>
           {opt.label}
         </Radio>
