@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, Layout, Spin, Tooltip, Typography } from "antd";
 import { LeftOutlined, RightOutlined, SearchOutlined } from "@ant-design/icons";
 import type { InputRef } from "antd";
@@ -13,7 +13,11 @@ import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
 import { PreviewPanel } from "./components/PreviewPanel.js";
 import { TokenIssuePanel } from "./components/TokenIssuePanel.js";
-import { SettingsPage } from "./components/SettingsPage.js";
+
+// 设置页（表格、表单、弹窗）按需加载：不打开设置时这部分 antd 不进首屏
+const SettingsPage = lazy(() =>
+  import("./components/SettingsPage.js").then((module) => ({ default: module.SettingsPage })),
+);
 
 const { Header, Sider, Content } = Layout;
 
@@ -98,11 +102,19 @@ export function App({
   if (view === "settings") {
     return (
       <WidgetCatalogContext.Provider value={catalogValue}>
-        <SettingsPage
-          username={session.user.username}
-          onUsernameChange={session.rename}
-          onBack={() => setView("workbench")}
-        />
+        <Suspense
+          fallback={
+            <div style={{ display: "grid", placeItems: "center", height: "100vh" }}>
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <SettingsPage
+            username={session.user.username}
+            onUsernameChange={session.rename}
+            onBack={() => setView("workbench")}
+          />
+        </Suspense>
       </WidgetCatalogContext.Provider>
     );
   }
