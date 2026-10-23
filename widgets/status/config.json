@@ -1,7 +1,12 @@
 {
   "schemaVersion": 1,
   "id": "status",
-  "icon": "●",
+  "icon": {
+    "type": "image",
+    "src": "./icon.svg",
+    "alt": "服务状态",
+    "fallback": "◷"
+  },
   "name": "服务状态",
   "summary": "检测后端 API 状态",
   "description": "展示当前服务连通情况，并按设定频率自动刷新。",
@@ -11,6 +16,10 @@
     "css": [
       "./style.css"
     ]
+  },
+  "defaultSize": {
+    "width": 360,
+    "height": 160
   },
   "fields": [
     {
@@ -53,7 +62,7 @@
     },
     {
       "key": "theme",
-      "label": "显示主题",
+      "label": "组件主题",
       "type": "select",
       "default": "auto",
       "options": [

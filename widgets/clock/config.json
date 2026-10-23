@@ -3,7 +3,7 @@
   "id": "clock",
   "icon": {
     "type": "image",
-    "src": "./assets/icon.svg",
+    "src": "./icon.svg",
     "alt": "日期时钟",
     "fallback": "◷"
   },
@@ -16,6 +16,17 @@
     "css": [
       "./style.css"
     ]
+  },
+  "server": {
+    "entry": "./server.ts",
+    "expose": [
+      "GET /api/weather"
+    ],
+    "auth": "token"
+  },
+  "defaultSize": {
+    "width": 360,
+    "height": 200
   },
   "fields": [
     {
@@ -102,7 +113,7 @@
     },
     {
       "key": "theme",
-      "label": "显示主题",
+      "label": "组件主题",
       "type": "select",
       "default": "auto",
       "options": [

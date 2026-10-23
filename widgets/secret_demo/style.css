@@ -1,0 +1,22 @@
+.secret-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.secret-head .embed-label { margin: 0; }
+.secret-ref { padding: 3px 8px; border-radius: 999px; background: rgb(55 53 47 / 6%); color: #77756e; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+.secret-value { display: flex; gap: 10px; margin-top: 14px; padding: 14px 16px; min-height: 58px; border: 1px solid rgb(55 53 47 / 12%); border-radius: 12px; background: rgb(55 53 47 / 4%); }
+.secret-status { flex: none; width: 9px; height: 9px; margin-top: 7px; border-radius: 50%; background: #d4a72c; }
+.secret-text { min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.secret-hint { margin: 10px 0 0; color: #77756e; font-size: 12px; line-height: 1.6; }
+.secret-actions { display: flex; gap: 8px; margin-top: 14px; }
+.secret-button { padding: 4px 12px; border: 1px solid rgb(55 53 47 / 16%); border-radius: 8px; background: transparent; color: inherit; font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color .15s, color .15s; }
+.secret-button:hover { border-color: var(--accent); color: var(--accent); }
+.secret-card[data-state="ready"] .secret-status { background: #18a66a; box-shadow: 0 0 0 4px rgb(24 166 106 / 14%); }
+.secret-card[data-state="empty"] .secret-status, .secret-card[data-state="error"] .secret-status { background: #d84a40; box-shadow: 0 0 0 4px rgb(216 74 64 / 14%); }
+:root[data-theme="dark"] .secret-ref { background: rgb(255 255 255 / 8%); color: #aaa9a5; }
+:root[data-theme="dark"] .secret-value { border-color: rgb(255 255 255 / 14%); background: rgb(255 255 255 / 5%); }
+:root[data-theme="dark"] .secret-hint { color: #aaa9a5; }
+:root[data-theme="dark"] .secret-button { border-color: rgb(255 255 255 / 18%); }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] .secret-ref { background: rgb(255 255 255 / 8%); color: #aaa9a5; }
+  :root[data-theme="auto"] .secret-value { border-color: rgb(255 255 255 / 14%); background: rgb(255 255 255 / 5%); }
+  :root[data-theme="auto"] .secret-hint { color: #aaa9a5; }
+  :root[data-theme="auto"] .secret-button { border-color: rgb(255 255 255 / 18%); }
+}

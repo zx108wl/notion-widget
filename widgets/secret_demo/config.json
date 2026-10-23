@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "secret_demo",
+  "icon": {
+    "type": "image",
+    "src": "./icon.svg",
+    "alt": "密钥演示",
+    "fallback": "🔑"
+  },
+  "name": "密钥演示",
+  "summary": "注册托管密钥并读取展示",
+  "description": "在「设置 → 第三方密钥」中为 secretDemo.default 填入任意值，插件服务端通过凭据托管解密读取，再由组件内的接口调用展示密钥值。",
+  "version": "0.1.0",
+  "entry": {
+    "js": "./index.ts",
+    "css": [
+      "./style.css"
+    ]
+  },
+  "server": {
+    "entry": "./server.ts",
+    "expose": [
+      "GET /api/secret_demo/secret"
+    ],
+    "auth": "token",
+    "credentials": [
+      {
+        "ref": "secretDemo.default",
+        "label": "演示密钥",
+        "description": "在设置 → 第三方密钥中填入任意字符串；插件服务端解密后通过接口返回，组件内展示。",
+        "placeholder": "例如 demo-3f9a2c",
+        "required": true
+      }
+    ]
+  },
+  "defaultSize": {
+    "width": 420,
+    "height": 210
+  },
+  "fields": [
+    {
+      "key": "title",
+      "label": "标题",
+      "type": "text",
+      "default": "密钥演示"
+    },
+    {
+      "key": "width",
+      "label": "组件宽度（px，留空自适应）",
+      "type": "number",
+      "default": "",
+      "min": 280,
+      "max": 1200,
+      "step": 1
+    },
+    {
+      "key": "height",
+      "label": "组件高度（px，留空自适应）",
+      "type": "number",
+      "default": "",
+      "min": 160,
+      "max": 1000,
+      "step": 1
+    },
+    {
+      "key": "theme",
+      "label": "组件主题",
+      "type": "select",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "跟随系统"
+        },
+        {
+          "value": "light",
+          "label": "浅色"
+        },
+        {
+          "value": "dark",
+          "label": "深色"
+        }
+      ],
+      "control": {
+        "type": "radio"
+      }
+    },
+    {
+      "key": "accent",
+      "label": "强调色",
+      "type": "color",
+      "default": "#6c5ce7"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+.quote-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-color: rgb(255 255 255 / 18%);
+  color: #fff;
+  background-color: #262524;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 12px 34px rgb(24 22 17 / 18%);
+  text-shadow: 0 1px 12px rgb(0 0 0 / 45%);
+}
+
+.quote-card::before {
+  flex: none;
+  background: rgb(255 255 255 / 72%);
+}
+
+.quote-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quote-card .quote-head .embed-label {
+  margin: 0;
+  color: rgb(255 255 255 / 86%);
+  font-size: 13px;
+  font-weight: 680;
+  letter-spacing: .02em;
+}
+
+.quote-source {
+  flex: none;
+  padding: 2px 9px;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 999px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.quote-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.quote-text {
+  margin: 0;
+  font-size: clamp(20px, 4.6vw, 32px);
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: .01em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.quote-text::before {
+  content: "“";
+  margin-right: 2px;
+  color: rgb(255 255 255 / 55%);
+}
+
+.quote-text::after {
+  content: "”";
+  margin-left: 2px;
+  color: rgb(255 255 255 / 55%);
+}
+
+.quote-text[data-uuid] {
+  cursor: pointer;
+}
+
+.quote-text[data-uuid]:hover {
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 45%);
+  text-underline-offset: 5px;
+}
+
+.quote-author {
+  align-self: flex-end;
+  margin: 0;
+  color: rgb(255 255 255 / 82%);
+  font-size: 13px;
+}
+
+.quote-hint {
+  margin: 0;
+  min-height: 1em;
+  color: rgb(255 255 255 / 70%);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.quote-card.is-loading .quote-text {
+  color: rgb(255 255 255 / 72%);
+  font-weight: 500;
+  animation: quote-pulse 1.6s ease-in-out infinite;
+}
+
+.quote-card.is-error .quote-text {
+  font-size: clamp(17px, 3.8vw, 22px);
+  font-weight: 600;
+}
+
+@keyframes quote-pulse {
+  0%, 100% { opacity: .5; }
+  50% { opacity: .95; }
+}
+
+@media (max-width: 380px) {
+  .quote-text {
+    font-size: 20px;
+  }
+}
