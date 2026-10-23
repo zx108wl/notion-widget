@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 // 已推进过的版本在下次启动不会重复执行（幂等）。
 // 仅供 Node 侧使用。
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // 全表 STRICT：列类型必须是 INT/INTEGER/REAL/TEXT/BLOB/ANY，写入类型不符直接报错而不是静默强转
 const MIGRATIONS = [
@@ -124,6 +124,14 @@ const MIGRATIONS = [
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
       ) STRICT;
+    `);
+  },
+  (db) => {
+    // v7 清理 v3 遗留列：令牌明文副本在 v4 已全部清空且不再写入，
+    // 留着空列容易让人误以为库里还有可解密的令牌，直接删掉
+    db.exec(`
+      ALTER TABLE embed_tokens DROP COLUMN secret_enc;
+      ALTER TABLE embed_tokens DROP COLUMN key_version;
     `);
   },
 ];

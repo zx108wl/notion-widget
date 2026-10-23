@@ -37,18 +37,15 @@ purgeRevokedTokens(db);
 app.disable("x-powered-by");
 app.use(express.json({ limit: "32kb" }));
 
+// 健康检查保持公开（容器探活与 status 组件都用它），但不回显插件清单与路由：
+// 那属于部署拓扑信息，没必要对未登录访客可见
 app.get("/api/health", (_request, response) => {
   response.set("Cache-Control", "no-store");
-  response.json({
-    ok: true,
-    time: new Date().toISOString(),
-    db: "ok",
-    plugins: plugins.map(({ id, routes, status }) => ({ id, routes, status })),
-  });
+  response.json({ ok: true, time: new Date().toISOString() });
 });
 
 // 插件分发器注册在核心路由之后、404 之前：核心永远优先，插件无法遮蔽核心接口
-const { table, plugins } = await loadPluginServers({ rootDir, mode: resolvePluginServerMode() });
+const { table } = await loadPluginServers({ rootDir, mode: resolvePluginServerMode() });
 
 // 被插件声明依赖的凭据：删除这类密钥时给出明确错误，而不是留到运行时才抛"未配置凭据"
 const declaredCredentials = new Map();
@@ -96,6 +93,27 @@ app.use((error, _request, response, _next) => {
   response.status(500).json({ error: "服务器内部错误" });
 });
 
-app.listen(port, "0.0.0.0", () => {
+const server = app.listen(port, "0.0.0.0", () => {
   console.log(`API listening on port ${port}`);
 });
+
+// 优雅退出：docker compose 重建容器时先发 SIGTERM，先停止接收新连接，
+// 等在途请求收尾后再关库；超时强制退出，避免探活失败却卡住不走
+function shutdown(signal) {
+  console.log(`[api] 收到 ${signal}，正在关闭…`);
+  server.close(() => {
+    try {
+      db.close();
+    } catch (error) {
+      console.error("[api] 关闭数据库失败:", error);
+    }
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error("[api] 关闭超时，强制退出");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));

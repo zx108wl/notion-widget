@@ -41,9 +41,11 @@ export async function publishControls(
         name: "widget-custom-controls",
         resolveId(id) {
           if (id === "virtual:widget-controls") return "\0widget-controls";
+          return null;
         },
         load(id) {
           if (id === "\0widget-controls") return source;
+          return null;
         },
       },
     ],

@@ -179,6 +179,12 @@ npm run check
 
 `WEB_PORT` 可以在服务器 `.env` 中修改；默认是 `18080`。修改后，1Panel 反向代理的目标端口也必须保持一致。
 
+### 反向代理与真实客户端 IP
+
+`deploy/openresty-location.conf` 是需要粘贴到 1Panel 站点 `server` 块里的参考片段：它用 `$remote_addr` 覆写 `X-Real-IP` 与 `X-Forwarded-For`，并下发 HSTS。容器内的 `deploy/nginx.conf` 只信任本机与私网来源，先用 `real_ip_recursive` 按 XFF 还原 `$remote_addr`，再覆写同名请求头交给 API。API 侧只读 `X-Real-IP`，因此客户端自带的 `X-Forwarded-For` 无法伪造来源——登录限流、令牌级 IP 黑名单与调用记录都依赖这个地址。
+
+安全响应头：工作台页面带 `X-Frame-Options: SAMEORIGIN` 与 `frame-ancestors 'none'`；`/widget.html` 与 `/widget/` 不设置这两项，保证嵌入页仍能被 Notion iframe 引用。静态资源与接口统一带 `X-Content-Type-Options: nosniff`，HSTS 由终止 TLS 的 1Panel 层下发。
+
 ## GitHub 推送部署
 
 `.github/workflows/deploy.yml` 会在 `main` 分支更新后检查构建、同步代码，并在服务器执行 `docker compose up -d --build`。

@@ -105,9 +105,20 @@ export function createSessionGuard(db) {
   };
 }
 
+// 来源 IP：只信反向代理用 $remote_addr 覆写的 X-Real-IP（见 deploy/nginx.conf 的 realip 段），
+// 绝不解析 X-Forwarded-For——它由客户端自带值拼接而成，取任意一段都能被伪造，
+// 而登录限流与令牌级 IP 黑名单都依赖这个值，被绕过即等于失效。
 export function clientIp(request) {
-  const forwarded = request?.headers?.["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  const value = first ? String(first).split(",")[0].trim() : "";
-  return value || request?.socket?.remoteAddress || "unknown";
+  const header = request?.headers?.["x-real-ip"];
+  const raw = Array.isArray(header) ? header[0] : header;
+  return normalizeIp(raw) || normalizeIp(request?.socket?.remoteAddress) || "unknown";
+}
+
+// IPv4-mapped IPv6（::ffff:1.2.3.4，Node 在双栈监听时常见）统一还原成 IPv4，
+// 保证调用记录、黑名单与限流用的都是同一种写法
+function normalizeIp(raw) {
+  const value = raw ? String(raw).trim() : "";
+  if (!value) return "";
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(value);
+  return mapped ? mapped[1] : value;
 }

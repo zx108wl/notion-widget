@@ -103,9 +103,8 @@ describe("嵌入令牌：签发 → 校验 → 注销 → 401", () => {
     assert.match(issued.token, /^w_[0-9A-Za-z]{22}\.[A-Za-z0-9_-]{20,}$/);
     assert.ok(verifyToken(db, issued.token));
     // 只存哈希：库里不存在可回显的令牌明文（令牌明文只在签发响应里返回一次）
-    const stored = one(db, "SELECT secret_hash, secret_enc FROM embed_tokens WHERE id = ?", issued.id);
+    const stored = one(db, "SELECT secret_hash FROM embed_tokens WHERE id = ?", issued.id);
     assert.ok(!issued.token.includes(stored.secret_hash) && !stored.secret_hash.includes(issued.token));
-    assert.equal(stored.secret_enc, null);
     const listed = listTokens(db).find((row: { id: string }) => row.id === issued.id);
     assert.ok(listed && !("token" in listed));
     assert.equal(verifyToken(db, `${issued.id}.wrongsecretwrongsecretwrongsecret`), null);
