@@ -34,6 +34,12 @@ export function updatePassword(db, userId, password) {
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hashPassword(password), userId);
 }
 
+// 改账号名：会话按 user_id 关联，改名后所有已登录会话自动跟着变，无需重新登录；
+// 唯一性由 users.username 的 UNIQUE 约束兜底，路由层先查一次给出友好错误。
+export function updateUsername(db, userId, username) {
+  db.prepare("UPDATE users SET username = ? WHERE id = ?").run(username, userId);
+}
+
 // 引导：只在 users 表为空时按 env 建库；之后只校验库内哈希，env 里改了也不会覆盖已有账号
 export function ensureAdminUser(db, env = process.env, logger = console) {
   if (countUsers(db) > 0) return null;

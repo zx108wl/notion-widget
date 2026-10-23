@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { authenticate, markLogin, updatePassword } from "../auth/users.js";
+import {
+  authenticate,
+  findUserByUsername,
+  markLogin,
+  updatePassword,
+  updateUsername,
+} from "../auth/users.js";
 import {
   clearSessionCookie,
   clientIp,
@@ -17,6 +23,8 @@ import {
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const MIN_PASSWORD_LENGTH = 8;
+// 账号名：2-32 位，允许各国文字、数字与 . _ -（不含空格与控制字符）
+const USERNAME_RE = /^[\p{L}\p{N}._-]{2,32}$/u;
 
 function createLoginLimiter() {
   const attempts = new Map();
@@ -80,6 +88,23 @@ export function createAuthRouter({ db, env = process.env }) {
   router.get("/me", requireSession, (request, response) => {
     response.set("Cache-Control", "no-store");
     return response.json({ user: { username: request.session.username } });
+  });
+
+  // 修改账号名：会话按 user_id 关联，改名后无需重新登录；.env 里的 ADMIN_USERNAME 只是引导值
+  router.put("/username", requireSession, (request, response) => {
+    const username = String(request.body?.username ?? "").trim();
+    if (!USERNAME_RE.test(username)) {
+      return response
+        .status(400)
+        .json({ error: "账号名需为 2-32 位，只能包含文字、数字、点、下划线或连字符" });
+    }
+    const owner = findUserByUsername(db, username);
+    if (owner && owner.id !== request.session.user_id) {
+      return response.status(409).json({ error: "该账号名已被占用" });
+    }
+    updateUsername(db, request.session.user_id, username);
+    response.set("Cache-Control", "no-store");
+    return response.json({ user: { username } });
   });
 
   router.post("/password", requireSession, (request, response) => {

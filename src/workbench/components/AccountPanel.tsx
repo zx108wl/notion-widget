@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button, Form, Input, Typography } from "antd";
+import { Alert, Button, Divider, Form, Input, Typography } from "antd";
 import { api } from "../api.js";
 
 type PasswordFormValues = {
@@ -8,13 +8,46 @@ type PasswordFormValues = {
   confirmPassword: string;
 };
 
-// 账户设置：当前账号信息与修改密码。
-// 改密码成功后会主动踢掉其它会话（服务端可撤销），当前会话保持登录。
-export function AccountPanel({ username }: { username: string }) {
+type UsernameFormValues = { username: string };
+
+// 账号名规则与服务端保持一致：2-32 位，文字/数字/点/下划线/连字符
+const USERNAME_RE = /^[\p{L}\p{N}._-]{2,32}$/u;
+
+// 账户设置：修改账号名与密码。
+// 会话按 user_id 关联，改名不需要重新登录；改密码会主动踢掉其它会话，当前会话保持登录。
+export function AccountPanel({
+  username,
+  onUsernameChange,
+}: {
+  username: string;
+  onUsernameChange: (username: string) => void;
+}) {
   const [form] = Form.useForm<PasswordFormValues>();
+  const [nameForm] = Form.useForm<UsernameFormValues>();
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+
+  const handleRename = async (values: UsernameFormValues) => {
+    const next = values.username.trim();
+    if (next === username) {
+      setFeedback("账号名没有变化。");
+      return;
+    }
+    setRenaming(true);
+    setError("");
+    setFeedback("");
+    try {
+      const user = await api.updateUsername(next);
+      onUsernameChange(user.username);
+      setFeedback(`账号名已更新为 ${user.username}。`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   const handleFinish = async (values: PasswordFormValues) => {
     setBusy(true);
@@ -42,8 +75,8 @@ export function AccountPanel({ username }: { username: string }) {
           账户设置
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 0 }}>
-          当前账号：<Typography.Text strong>{username}</Typography.Text>。账号由部署时
-          `.env` 中的 ADMIN_USERNAME 初始化，这里只支持修改密码。
+          当前账号：<Typography.Text strong>{username}</Typography.Text>。账号名与密码都在这里修改；
+          部署时 `.env` 的 ADMIN_USERNAME 只用于首次创建管理员，之后不会覆盖。
         </Typography.Paragraph>
       </div>
 
@@ -51,6 +84,39 @@ export function AccountPanel({ username }: { username: string }) {
       {feedback && (
         <Alert type="success" message={feedback} showIcon closable onClose={() => setFeedback("")} />
       )}
+
+      <Form<UsernameFormValues>
+        key={username}
+        form={nameForm}
+        layout="vertical"
+        style={{ maxWidth: 420, marginBottom: 0 }}
+        initialValues={{ username }}
+        onFinish={(values) => void handleRename(values)}
+        requiredMark={false}
+      >
+        <Form.Item
+          name="username"
+          label="账号名"
+          extra="2-32 位，可包含文字、数字、点、下划线或连字符"
+          rules={[
+            { required: true, message: "请输入账号名" },
+            { pattern: USERNAME_RE, message: "只能包含文字、数字、点、下划线或连字符，长度 2-32 位" },
+          ]}
+        >
+          <Input maxLength={32} placeholder="账号名" />
+        </Form.Item>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button htmlType="submit" loading={renaming}>
+            保存账号名
+          </Button>
+        </Form.Item>
+      </Form>
+
+      <Divider style={{ margin: 0 }} />
+
+      <Typography.Title level={5} style={{ margin: 0 }}>
+        修改密码
+      </Typography.Title>
 
       <Form<PasswordFormValues>
         form={form}

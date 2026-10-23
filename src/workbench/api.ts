@@ -104,6 +104,11 @@ export const api = {
       method: "POST",
       body: { currentPassword, newPassword },
     }),
+  updateUsername: (username: string) =>
+    request<{ user: SessionUser }>("/api/auth/username", {
+      method: "PUT",
+      body: { username },
+    }).then((data) => data.user),
 
   listCredentials: () =>
     request<{ credentials: CredentialRow[] }>("/api/admin/credentials").then((data) => data.credentials),

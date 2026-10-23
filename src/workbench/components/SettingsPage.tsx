@@ -9,7 +9,15 @@ import { CallLogsPanel } from "./CallLogsPanel.js";
 const { Header, Content } = Layout;
 
 // 设置页：集中管理账户、访问令牌、第三方密钥与调用记录，与工作台主视图分离。
-export function SettingsPage({ username, onBack }: { username: string; onBack: () => void }) {
+export function SettingsPage({
+  username,
+  onUsernameChange,
+  onBack,
+}: {
+  username: string;
+  onUsernameChange: (username: string) => void;
+  onBack: () => void;
+}) {
   const [active, setActive] = useState("account");
 
   return (
@@ -37,7 +45,11 @@ export function SettingsPage({ username, onBack }: { username: string; onBack: (
             activeKey={active}
             onChange={setActive}
             items={[
-              { key: "account", label: "账户", children: <AccountPanel username={username} /> },
+              {
+                key: "account",
+                label: "账户",
+                children: <AccountPanel username={username} onUsernameChange={onUsernameChange} />,
+              },
               {
                 key: "tokens",
                 label: "访问令牌",

@@ -98,7 +98,11 @@ export function App({
   if (view === "settings") {
     return (
       <WidgetCatalogContext.Provider value={catalogValue}>
-        <SettingsPage username={session.user.username} onBack={() => setView("workbench")} />
+        <SettingsPage
+          username={session.user.username}
+          onUsernameChange={session.rename}
+          onBack={() => setView("workbench")}
+        />
       </WidgetCatalogContext.Provider>
     );
   }

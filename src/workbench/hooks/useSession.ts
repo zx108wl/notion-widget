@@ -37,5 +37,10 @@ export function useSession() {
     }
   }, []);
 
-  return { user, loading, login, logout };
+  // 改名后同步顶部账号显示：会话按 user_id 关联，服务端不需要重新登录
+  const rename = useCallback((username: string) => {
+    setUser({ username });
+  }, []);
+
+  return { user, loading, login, logout, rename };
 }
