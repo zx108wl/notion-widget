@@ -5,3 +5,10 @@ dist/
 !.env.example
 *.log
 
+# 运行时数据：SQLite 库含加密后的第三方密钥与令牌哈希，绝不入库
+data/
+
+# 编辑器/AI 工具工作区与本地缓存
+.trae/
+coverage/
+*.tsbuildinfo
