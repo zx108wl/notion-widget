@@ -34,7 +34,7 @@ export function LoginPage({ onLogin }: { onLogin: (username: string, password: s
           登录工作台
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>
-          首次登录的账号由 .env 的 ADMIN_USERNAME / ADMIN_PASSWORD 引导创建。
+          首次部署会自动创建 admin 账号；初始密码见容器日志，若来自自动生成则首次登录必须修改。
         </Typography.Paragraph>
         {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 12 }} />}
         <Form layout="vertical" onFinish={handleSubmit} requiredMark={false}>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createSessionGuard } from "../auth/session.js";
+import { createPasswordChangeGuard, createSessionGuard } from "../auth/session.js";
 import {
   deleteCredential,
   listCredentials,
@@ -44,6 +44,8 @@ export function createAdminRouter({
 }) {
   const router = Router();
   router.use(createSessionGuard(db));
+  // 首次登录改密前，密钥与令牌管理一律不可用
+  router.use(createPasswordChangeGuard());
 
   // declaredCredentials 是 ref → Set<widgetId>，这里反向构建 widgetId → Set<ref>
   const widgetDeclared = new Map();

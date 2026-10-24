@@ -19,7 +19,7 @@ export function resolveSession(db, token, now = Date.now()) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT s.token_hash, s.user_id, s.expires_at, s.revoked_at, u.username
+      `SELECT s.token_hash, s.user_id, s.expires_at, s.revoked_at, u.username, u.must_change_password
          FROM sessions s JOIN users u ON u.id = s.user_id
         WHERE s.token_hash = ?`,
     )
@@ -44,6 +44,14 @@ export function revokeOtherSessions(db, userId, keepToken, now = Date.now()) {
       "UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND token_hash != ? AND revoked_at IS NULL",
     )
     .run(new Date(now).toISOString(), userId, sha256Hex(keepToken ?? ""));
+  return Number(result.changes);
+}
+
+// CLI 重置密码后使用：该账号所有会话立即失效
+export function revokeAllSessions(db, userId, now = Date.now()) {
+  const result = db
+    .prepare("UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL")
+    .run(new Date(now).toISOString(), userId);
   return Number(result.changes);
 }
 
@@ -101,6 +109,18 @@ export function createSessionGuard(db) {
     }
     request.session = session;
     request.sessionToken = token;
+    next();
+  };
+}
+
+// 首次登录改密守卫：必须挂在会话守卫之后。
+// 放行范围只保留 /api/auth 内的 me / password / logout，其它接口一律 403。
+export function createPasswordChangeGuard() {
+  return function requirePasswordChange(request, response, next) {
+    if (Number(request.session?.must_change_password) === 1) {
+      response.status(403).json({ error: "首次登录需要先修改密码", code: "PASSWORD_CHANGE_REQUIRED" });
+      return;
+    }
     next();
   };
 }

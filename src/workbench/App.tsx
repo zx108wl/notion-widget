@@ -9,6 +9,7 @@ import { useSession } from "./hooks/useSession.js";
 import type { ThemeMode, ResolvedTheme } from "./useTheme.js";
 import { AppHeader } from "./components/AppHeader.js";
 import { LoginPage } from "./components/LoginPage.js";
+import { ForcePasswordChange } from "./components/ForcePasswordChange.js";
 import { WidgetCatalog } from "./components/WidgetCatalog.js";
 import { ConfigForm } from "./components/ConfigForm.js";
 import { PreviewPanel } from "./components/PreviewPanel.js";
@@ -89,6 +90,17 @@ export function App({
   // 工作台是公开的，未登录只看登录页：密钥与令牌的管理接口一律要求有效会话
   if (!session.user) {
     return <LoginPage onLogin={session.login} />;
+  }
+
+  // 首次部署自动生成的密码：改密前服务端会拒绝其它接口，这里先拦住整个工作台
+  if (session.user.mustChangePassword) {
+    return (
+      <ForcePasswordChange
+        username={session.user.username}
+        onChanged={session.passwordChanged}
+        onLogout={() => void session.logout()}
+      />
+    );
   }
 
   if (loading) {

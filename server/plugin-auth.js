@@ -14,6 +14,10 @@ import { callLoggerOf } from "./auth/usage.js";
 
 const INVALID = Object.freeze({ status: 401, body: { error: "凭据无效或已注销" } });
 const IP_BLOCKED = Object.freeze({ status: 403, body: { error: "该 IP 已被禁用" } });
+const PASSWORD_CHANGE_REQUIRED = Object.freeze({
+  status: 403,
+  body: { error: "首次登录需要先修改密码", code: "PASSWORD_CHANGE_REQUIRED" },
+});
 
 // entry.auth === "token" 时的凭据校验：
 // - 带了 Bearer 令牌：只认令牌。有效则放行；无效/已注销立刻 401，不再回退到会话——
@@ -33,6 +37,8 @@ export function createPluginAuthorizer({ db }) {
     }
     const session = resolveSession(db, readCookie(request, SESSION_COOKIE));
     if (!session) return { ok: false, ...INVALID };
+    // 首次登录未改密前不允许通过会话调用插件接口（令牌调用不受影响）
+    if (Number(session.must_change_password) === 1) return { ok: false, ...PASSWORD_CHANGE_REQUIRED };
     return { ok: true, session };
   };
 }

@@ -34,9 +34,10 @@ COPY --from=builder /app/dist/widgets ./dist/widgets
 
 # 数据库目录：绝不 COPY 任何数据库文件进来，只建目录并把属主交给运行用户 node，
 # 这样挂载命名卷后写入权限正确（数据由卷持久化，跨"整镜像替换"存活）
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data /key && chown node:node /data /key
 
 USER node
 EXPOSE 3000
 
-CMD ["node", "server/index.js"]
+# start.js 先解析/生成主密钥，再加载服务本体
+CMD ["node", "server/start.js"]

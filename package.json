@@ -8,15 +8,15 @@
   },
   "scripts": {
     "dev": "concurrently -k -n api,web -c yellow,cyan \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "tsx watch --include \"widgets/**/*.ts\" --include \"widgets/**/config.json\" server/index.js",
+    "dev:api": "tsx watch --include \"widgets/**/*.ts\" --include \"widgets/**/config.json\" server/start.js",
     "dev:web": "vite",
     "build": "tsx scripts/build.ts",
     "build:server": "tsx scripts/build.ts --server-only",
     "preview": "vite preview",
-    "start": "node server/index.js",
+    "start": "node server/start.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "tsc --noEmit && vitest run && node --check server/index.js && node --check server/plugin-auth.js && node --check server/plugin-loader.js && node --check server/plugin-routes.js && node --check server/db/schema.js && node --check server/crypto/secrets.js && node --check server/auth/password.js && node --check server/auth/users.js && node --check server/auth/session.js && node --check server/auth/credentials.js && node --check server/auth/tokens.js && node --check server/auth/usage.js && node --check server/routes/auth.js && node --check server/routes/admin.js && tsx scripts/build.ts && tsx scripts/verify-build.ts"
+    "check": "tsc --noEmit && vitest run && node --check server/index.js && node --check server/start.js && node --check server/cli.js && node --check server/plugin-auth.js && node --check server/crypto/key-store.js && node --check server/auth/rotate.js && node --check server/plugin-loader.js && node --check server/plugin-routes.js && node --check server/db/schema.js && node --check server/crypto/secrets.js && node --check server/auth/password.js && node --check server/auth/users.js && node --check server/auth/session.js && node --check server/auth/credentials.js && node --check server/auth/tokens.js && node --check server/auth/usage.js && node --check server/routes/auth.js && node --check server/routes/admin.js && tsx scripts/build.ts && tsx scripts/verify-build.ts"
   },
   "dependencies": {
     "antd": "^5.22.0",

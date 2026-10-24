@@ -76,7 +76,7 @@ export function AccountPanel({
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 0 }}>
           当前账号：<Typography.Text strong>{username}</Typography.Text>。账号名与密码都在这里修改；
-          部署时 `.env` 的 ADMIN_USERNAME 只用于首次创建管理员，之后不会覆盖。
+          部署时的 ADMIN_USERNAME / ADMIN_PASSWORD 只用于首次创建管理员，之后不会覆盖。
         </Typography.Paragraph>
       </div>
 

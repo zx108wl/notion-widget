@@ -84,7 +84,10 @@ export function createAuthRouter({ db, env = process.env }) {
     markLogin(db, user.id);
     response.set("Set-Cookie", serializeSessionCookie(token, { secure }));
     response.set("Cache-Control", "no-store");
-    return response.json({ user: { username: user.username }, expiresAt });
+    return response.json({
+      user: { username: user.username, mustChangePassword: Number(user.must_change_password) === 1 },
+      expiresAt,
+    });
   });
 
   router.post("/logout", (request, response) => {
@@ -97,11 +100,19 @@ export function createAuthRouter({ db, env = process.env }) {
 
   router.get("/me", requireSession, (request, response) => {
     response.set("Cache-Control", "no-store");
-    return response.json({ user: { username: request.session.username } });
+    return response.json({
+      user: {
+        username: request.session.username,
+        mustChangePassword: Number(request.session.must_change_password) === 1,
+      },
+    });
   });
 
   // 修改账号名：会话按 user_id 关联，改名后无需重新登录；.env 里的 ADMIN_USERNAME 只是引导值
   router.put("/username", requireSession, (request, response) => {
+    if (Number(request.session.must_change_password) === 1) {
+      return response.status(403).json({ error: "首次登录需要先修改密码", code: "PASSWORD_CHANGE_REQUIRED" });
+    }
     const ip = clientIp(request);
     // 改名本身不敏感，但反复试探可以枚举账号名，失败次数仍按 IP 限制
     if (!renameLimiter.allow(ip)) {
@@ -145,7 +156,7 @@ export function createAuthRouter({ db, env = process.env }) {
     updatePassword(db, user.id, next);
     // 改密码后立刻踢掉其它会话：服务端可撤销，不需要等 Cookie 过期
     const revoked = revokeOtherSessions(db, user.id, request.sessionToken);
-    return response.json({ ok: true, revokedSessions: revoked });
+    return response.json({ ok: true, revokedSessions: revoked, mustChangePassword: false });
   });
 
   return router;

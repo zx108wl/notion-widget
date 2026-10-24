@@ -3,6 +3,8 @@
 
 export interface SessionUser {
   username: string;
+  /** 首次部署自动生成的密码：改密前只允许访问登录态与改密接口 */
+  mustChangePassword: boolean;
 }
 
 export interface CredentialRow {
@@ -100,7 +102,7 @@ export const api = {
     }).then((data) => data.user),
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
   changePassword: (currentPassword: string, newPassword: string) =>
-    request<{ ok: boolean; revokedSessions: number }>("/api/auth/password", {
+    request<{ ok: boolean; revokedSessions: number; mustChangePassword: false }>("/api/auth/password", {
       method: "POST",
       body: { currentPassword, newPassword },
     }),

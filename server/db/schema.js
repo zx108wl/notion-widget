@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 // 已推进过的版本在下次启动不会重复执行（幂等）。
 // 仅供 Node 侧使用。
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 // 全表 STRICT：列类型必须是 INT/INTEGER/REAL/TEXT/BLOB/ANY，写入类型不符直接报错而不是静默强转
 const MIGRATIONS = [
@@ -133,6 +133,10 @@ const MIGRATIONS = [
       ALTER TABLE embed_tokens DROP COLUMN secret_enc;
       ALTER TABLE embed_tokens DROP COLUMN key_version;
     `);
+  },
+  (db) => {
+    // v8 首次部署自动生成管理员密码后强制改密：标记只在该账号首次登录后放行其它接口
+    db.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;`);
   },
 ];
 

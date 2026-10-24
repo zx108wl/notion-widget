@@ -39,8 +39,13 @@ export function useSession() {
 
   // 改名后同步顶部账号显示：会话按 user_id 关联，服务端不需要重新登录
   const rename = useCallback((username: string) => {
-    setUser({ username });
+    setUser((previous) => (previous ? { ...previous, username } : previous));
   }, []);
 
-  return { user, loading, login, logout, rename };
+  // 首次登录改密成功后，服务端已清除标记，前端同步解除强制改密页
+  const passwordChanged = useCallback(() => {
+    setUser((previous) => (previous ? { ...previous, mustChangePassword: false } : previous));
+  }, []);
+
+  return { user, loading, login, logout, rename, passwordChanged };
 }

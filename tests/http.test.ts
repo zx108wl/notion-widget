@@ -159,6 +159,36 @@ describe("认证路由：登录、改名、改密码", () => {
     });
   });
 
+  it("自动生成的初始密码：改密前拒绝其它接口，改密后立即放行", async () => {
+    const db = memoryDb();
+    createUser(db, "admin", "password123", { mustChangePassword: true });
+
+    await withApp(db, async (base) => {
+      const response = await login(base, "admin", "password123");
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { user: { mustChangePassword: boolean } };
+      assert.equal(body.user.mustChangePassword, true);
+      const cookie = sessionCookie(response);
+
+      assert.equal((await fetch(`${base}/api/admin/tokens`, { headers: { cookie } })).status, 403);
+      assert.equal(
+        (await fetch(`${base}/api/auth/me`, { headers: { cookie } })).status,
+        200,
+      );
+
+      const changed = await fetch(`${base}/api/auth/password`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ currentPassword: "password123", newPassword: "newpassword123" }),
+      });
+      assert.equal(changed.status, 200);
+
+      const me = await fetch(`${base}/api/auth/me`, { headers: { cookie } });
+      assert.equal(((await me.json()) as { user: { mustChangePassword: boolean } }).user.mustChangePassword, false);
+      assert.equal((await fetch(`${base}/api/admin/tokens`, { headers: { cookie } })).status, 200);
+    });
+  });
+
   it("同一 IP 连续登录失败 10 次后返回 429", async () => {
     const db = memoryDb();
     createUser(db, "admin", "password123");
