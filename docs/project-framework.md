@@ -204,12 +204,14 @@ docker compose exec api node server/cli.js set-password --user admin
 
 ## 7. GitHub 推送部署
 
-`.github/workflows/deploy.yml` 在 `main` 更新或手动触发时执行：
+`.github/workflows/deploy.yml` 在 `main` 或 `refactor/ts-ui` 更新、以及手动触发时执行：
 
 1. `npm ci` 与 `npm run check`。
 2. 用真实 Nginx 镜像校验 `deploy/nginx.conf`。
 3. `rsync` 同步代码，排除 `.env`、`.git`、`node_modules`、`dist`。
 4. 在服务器执行 `docker compose up -d --build --remove-orphans`。
+5. 从 `web` 容器内部请求 `http://127.0.0.1/api/health`，最多重试 90 秒；失败时输出 `docker compose ps` 与 `api` 日志并让工作流失败。
+6. 输出首次部署提示（主密钥与 admin 初始密码的位置），不打印任何明文密钥。
 
 在 GitHub 仓库的 `Settings → Secrets and variables → Actions` 配置：
 

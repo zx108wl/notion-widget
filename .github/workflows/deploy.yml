@@ -2,7 +2,7 @@ name: Deploy to 1Panel
 
 on:
   push:
-    branches: [main]
+    branches: [main, refactor/ts-ui]
   workflow_dispatch:
 
 permissions:
@@ -75,3 +75,37 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$DEPLOY_PATH' && docker compose up -d --build --remove-orphans"
+
+      - name: Verify deployment health
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          # 从 web 容器内部走一遍 nginx -> api，确认重建后服务真的可用，避免"部署成功但线上 502"
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && bash -s" <<'REMOTE'
+          i=0
+          while [ "$i" -lt 45 ]; do
+            if docker compose exec -T web wget -qO- http://127.0.0.1/api/health >/dev/null 2>&1; then
+              echo "部署健康检查通过"
+              exit 0
+            fi
+            i=$((i + 1))
+            sleep 2
+          done
+          echo "部署健康检查失败：90 秒内 /api/health 未就绪"
+          docker compose ps
+          docker compose logs --tail=80 api
+          exit 1
+          REMOTE
+
+      - name: Show first-deploy hints
+        run: |
+          echo "首次部署提示："
+          echo "- 主密钥首次启动自动生成，持久化在 widget-key 卷的 /key/master.key。"
+          echo "- 管理员账号 admin 的初始密码只在 users 表为空时生成，写入 api 日志与 /key/initial-admin-password。"
+          echo "- 查看初始密码（在服务器项目目录执行）：docker compose exec api cat /key/initial-admin-password"
+          echo "- 首次登录必须修改密码，改完请删除该密码文件。"
