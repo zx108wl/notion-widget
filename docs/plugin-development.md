@@ -1,123 +1,162 @@
 # 插件开发文档
 
-本文对应当前 Notion Widget 框架。插件包含配置 JSON、JavaScript 渲染入口、CSS 和可选静态资源。工作台根据 JSON 生成配置表单，生成 `/widget/{id}?参数=值` 嵌入地址，组件在 iframe 中运行。
+本文对应当前 Notion Widget 框架，可直接作为 AI 开发任务的输入。插件是一个独立目录：`config.json` 描述元信息与参数，前端入口导出 `render`，可选的服务端入口导出 `routes`。工作台根据配置生成表单和嵌入 URL，嵌入页只加载该插件的资源。
 
 ## AI 开发执行约定
 
-本文是插件开发任务的独立输入。AI 在获得具体插件需求和本项目代码后，可按本文完成实现，无需先阅读项目框架文档。文中的路径和命令均相对于项目根目录。
-
 ### 开始前确认
 
-从用户需求中确定插件 ID、名称、功能、交互、可配置项和数据来源。检查目标插件是否已存在；修改现有插件时保留 ID 和已有参数兼容性。缺失的非关键细节可采用合理默认值并在交付时说明；涉及外部 API、凭据或无法推断的核心行为时，先确认依赖，不虚构接口。
+从需求中确定插件 ID、名称、功能、可配置项、是否需要服务端接口与第三方密钥。ID 使用小写字母、数字与连字符，目录名、`config.json` 的 `id` 必须一致。修改已有插件时保留 ID 与已有参数含义。
+
+缺少非关键细节时采用合理默认值并在交付时说明；涉及外部 API、凭据或无法推断的核心行为时先确认依赖，不虚构接口。
 
 ### 修改范围
 
-- 通常只新增或修改 `widgets/{id}/`，以及 `src/widgets-registry.js` 的插件 ID 注册。
-- 配置参数必须定义在 `config.json` 中，由工作台动态生成表单；不在工作台代码里硬编码插件专用字段。
-- 复用现有公共工具和样式。只有具体需求涉及框架能力或后端接口时，才调整共享文件、加载器、构建脚本或服务端。
-- 不创建独立插件工程，不更换技术栈；当前插件运行在现有项目内。
-- 不手改 `dist/`、清单产物或带哈希文件名；通过构建生成。
+- 只新增或修改 `widgets/{id}/`。**不需要修改任何注册表**，框架自动扫描含 `config.json` 的目录。
+- 所有用户可调参数必须定义在 `config.json` 的 `fields` 中，不在工作台代码里硬编码插件字段。
+- 服务端依赖必须是根 `package.json` 已声明的包或 Node 内置模块；不为单个插件新增私有依赖树。
+- 只有需求涉及框架能力时才修改 `src/core/`、`scripts/` 或 `server/`，并说明原因。
+- 不手改 `dist/`、清单或带哈希文件名。
 
-### 必须完成的步骤
+### 必须完成
 
-1. 读取目标插件（如存在）、`src/widgets-registry.js` 和 `src/widget-config.js`，确认当前协议与本文一致；如代码已变更，指出差异并以当前代码为准。
-2. 在 `widgets/{id}/` 实现完整配置、JS、CSS 和需要的静态资源。
-3. 注册新 ID，保留其他插件；确保所有用户可调参数都进入配置定义。
-4. 处理自适应尺寸、主题、输入异常和异步失败；不要仅交付占位内容或未实现的 TODO。
-5. 运行 `npm run check`，检查工作台表单、生成 URL 和嵌入页。涉及 API 时验证成功与失败状态。
-6. 交付修改文件、可访问的预览地址、支持参数、验证结果及未解决依赖。未执行的验证应明确标注，不宣称通过。
+1. 通读目标目录（如已存在）与本文；协议不一致时以当前代码为准并指出差异。
+2. 实现配置、前端入口、样式、可选的服务端模块与静态资源。
+3. 覆盖主题、自适应尺寸、参数异常、异步失败与销毁清理。
+4. 运行 `npm run check`；涉及接口时启动 API 验证成功、未授权与失败路径。
+5. 交付修改文件、预览地址、配置项、验证结果与未解决依赖。未执行的验证要明确标注，不能宣称通过。
 
 ### 任务输入示例
 
 ```text
-请读取 docs/plugin-development.md，按其中协议在当前项目开发插件。
+读取 docs/plugin-development.md，按当前协议开发插件。
 插件 ID：daily-note
 名称：每日一句
-功能：显示标题和一段自定义文字。
-可配置项：标题、正文、主题、强调色、宽度和高度。
-静态资源：无。
-数据来源：配置参数，不调用外部 API。
-请完成实现、注册和验证，并给出预览地址。
+功能：显示标题和一段自定义文字，参数变化时原地更新。
+可配置项：标题、正文、主题、强调色、宽高。
+服务端：不需要。
+数据来源：仅配置参数。
+请完成实现与验证，并给出预览地址。
 ```
 
-## 1. 插件目录与宿主约定
+## 1. 目录与自动发现
 
 ```text
 widgets/
-  shared.js               escapeHtml 工具
-  shared.css              通用卡片和主题样式
+  shared.css              插件共享卡片与主题样式
+  shared.ts               escapeHtml 等小工具
   {id}/
-    config.json           插件描述、资源入口和参数定义
-    index.js              导出 render(root, config)
-    style.css             从 JS 导入
-    assets/               可选静态资源
-src/
-  widgets-registry.js     新增插件只需登记 ID
-  widget-config.js        配置协议校验，可读取核对
+    config.json            必需：元信息、fields、入口，可选 server / defaultSize
+    index.ts               前端入口，导出 render
+    style.css              由 JS 导入
+    icon.svg               本地图标
+    server.ts              可选：服务端路由
+    components/            可选：自定义设置控件等
+    assets/                可选：图片、字体、数据文件
 ```
 
-宿主根据 JSON 生成配置表单，将 URL 参数解析为字符串对象后调用 `render(root, config)`。插件必须登记 ID；当前不会自动扫描目录，也不提供上传 ZIP 即安装的能力。
+`src/core/registry.ts`、开发清单中间件、构建脚本与 `server/plugin-loader.js` 都按同一规则扫描：**目录内存在 `config.json` 即视为插件**。新增目录后：
 
-## 2. 快速创建一个插件
+- 开发模式刷新工作台即可出现，无需重启 Vite；
+- 新增服务端模块时，`tsx watch` 可能看不到新目录，需要重启 `npm run dev:api`；
+- 生产必须重新构建并部署，`dist/widgets/manifest.json` 才会包含新插件。
 
-以下示例创建 `hello` 插件，可复制后运行。
+## 2. 快速开始：纯前端插件
 
-### 2.1 创建目录和配置
+创建 `widgets/hello/`。
 
-创建 `widgets/hello/config.json`：
+### 2.1 config.json
 
 ```json
 {
   "schemaVersion": 1,
   "id": "hello",
   "name": "问候卡片",
-  "icon": { "type": "image", "src": "./icon.svg", "alt": "问候卡片", "fallback": "👋" },
+  "icon": {
+    "type": "image",
+    "src": "./icon.svg",
+    "alt": "问候卡片",
+    "fallback": "H"
+  },
   "summary": "自定义问候语",
   "description": "展示标题和问候语，支持主题、强调色和自适应尺寸。",
   "version": "0.1.0",
   "entry": {
-    "js": "./index.js",
+    "js": "./index.ts",
     "css": ["./style.css"]
   },
+  "defaultSize": { "width": 420, "height": 210 },
   "fields": [
-    { "key": "title", "label": "标题", "type": "text", "default": "你好", "placeholder": "填写标题" },
+    { "key": "title", "label": "标题", "type": "text", "default": "你好", "maxLength": 40 },
     { "key": "message", "label": "问候语", "type": "text", "default": "愿你今天有个好心情" },
-    { "key": "width", "label": "宽度（px，留空自适应）", "type": "number", "default": "", "min": 280, "max": 1200, "step": 1 },
-    { "key": "height", "label": "高度（px，留空自适应）", "type": "number", "default": "", "min": 160, "max": 1000, "step": 1 },
     {
-      "key": "theme", "label": "主题", "type": "select", "default": "auto",
+      "key": "width", "label": "组件宽度（px，留空自适应）", "type": "number",
+      "default": "", "min": 280, "max": 1200, "step": 1
+    },
+    {
+      "key": "height", "label": "组件高度（px，留空自适应）", "type": "number",
+      "default": "", "min": 160, "max": 1000, "step": 1
+    },
+    {
+      "key": "theme", "label": "组件主题", "type": "select", "default": "auto",
       "options": [
         { "value": "auto", "label": "跟随系统" },
         { "value": "light", "label": "浅色" },
         { "value": "dark", "label": "深色" }
-      ]
+      ],
+      "control": { "type": "radio" }
     },
     { "key": "accent", "label": "强调色", "type": "color", "default": "#6c5ce7" }
   ]
 }
 ```
 
-### 2.2 编写渲染入口
+### 2.2 前端入口
 
-创建 `widgets/hello/index.js`：
-
-```js
+```ts
 import "../shared.css";
 import "./style.css";
 import { escapeHtml } from "../shared.js";
 
-export function render(root, config) {
+interface HelloConfig {
+  title: string;
+  message: string;
+  width: string;
+  height: string;
+  theme: string;
+  accent: string;
+}
+
+export function render(root: HTMLElement, config: HelloConfig) {
   root.innerHTML = `
-    <section class="embed-card hello-card">
+    <section class="embed-card hello-card" style="--accent:${config.accent}">
       <p class="embed-label">${escapeHtml(config.title)}</p>
       <h1 class="hello-message">${escapeHtml(config.message)}</h1>
     </section>
   `;
-  root.querySelector(".hello-card").style.setProperty("--accent", config.accent);
+
+  const card = root.querySelector<HTMLElement>(".hello-card")!;
+  let current = { ...config };
+
+  return {
+    update(next: HelloConfig) {
+      if (next.accent !== current.accent) card.style.setProperty("--accent", next.accent);
+      if (next.title !== current.title) {
+        root.querySelector(".embed-label")!.textContent = next.title;
+      }
+      if (next.message !== current.message) {
+        root.querySelector(".hello-message")!.textContent = next.message;
+      }
+      current = { ...next };
+    },
+    destroy() {
+      root.replaceChildren();
+    }
+  };
 }
 ```
 
-创建 `widgets/hello/style.css`：
+`widgets/hello/style.css`：
 
 ```css
 .hello-card {
@@ -126,7 +165,7 @@ export function render(root, config) {
   justify-content: center;
 }
 
-.hello-card .hello-message {
+.hello-message {
   margin: 0;
   color: var(--accent);
   font-size: clamp(24px, 6vw, 40px);
@@ -134,135 +173,89 @@ export function render(root, config) {
 }
 ```
 
-必须在 JS 中导入样式。只把文件路径写入 `entry.css` 不会让构建器打包 CSS。
+CSS 必须从 JS 导入；只在 `entry.css` 写路径不会让构建器打包样式。
 
-### 2.3 注册插件
+### 2.3 运行
 
-在 `src/widgets-registry.js` 的 ID 数组末尾添加 `hello`：
-
-```js
-export const widgets = Object.fromEntries(
-  ["clock", "status", "hello"].map(id => [id, { id }]),
-);
-```
-
-目录名、注册 ID 和配置的 `id` 必须一致。建议使用小写字母、数字、连字符，例如 `hello`、`daily-note`。名称、版本等元信息只维护在配置 JSON 中。
-
-### 2.4 启动与检查
-
-需要 Node.js 22 或更高版本。首次使用时，在项目根目录运行：
-
-```powershell
-Copy-Item .env.example .env
-npm install
+```bash
 npm run dev
 ```
 
-已有 `.env` 时跳过复制命令，以保留本地配置。
-
-打开 `http://127.0.0.1:5173/?widget=hello`，调整参数并检查 iframe 预览。也可直接访问：
+打开：
 
 ```text
-http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
+http://127.0.0.1:5173/?widget=hello
+http://127.0.0.1:5173/widget/hello?message=欢迎&theme=dark
 ```
 
-开发模式的清单由 Vite 动态生成。添加插件 ID 后若列表未更新，重启 `npm run dev`。
+## 3. config.json 参考
 
-## 3. config.json 顶层字段
+### 3.1 顶层字段
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `schemaVersion` | number | 必须为 `1`，表示配置协议版本 |
-| `id` | string | 与注册 ID、目录名一致 |
-| `name` | string | 工作台显示名称，不能为空 |
-| `icon` | string / object | 文本、Emoji、文本对象或图片对象，见图标配置 |
-| `summary` | string | 插件列表中的短简介，不能为空 |
-| `description` | string | 配置面板中的功能说明，不能为空 |
-| `version` | string | 插件版本，建议使用 `0.1.0`；不会自动递增 |
-| `entry.js` | string | 相对于配置文件的 JS 入口，必须以 `./` 开头并以 `.js` 结尾 |
-| `entry.css` | string[] | CSS 相对路径数组；实际发布路径由构建结果生成 |
-| `fields` | array | 按显示顺序排列的参数定义 |
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `schemaVersion` | number | 是 | 固定为 `1` |
+| `id` | string | 是 | 必须与目录名一致 |
+| `name` | string | 是 | 工作台显示名称 |
+| `icon` | object | 是 | 图片图标对象 |
+| `summary` | string | 是 | 列表中的短简介 |
+| `description` | string | 是 | 配置区上方的功能说明 |
+| `version` | string | 是 | 插件版本，建议语义化，不会自动递增 |
+| `entry.js` | string | 是 | 前端入口，`./` 开头的 `.js/.ts/.tsx` |
+| `entry.css` | string[] | 是 | `./` 开头的 CSS 路径；可写多份，但实际打包结果由 JS import 决定 |
+| `server` | object | 否 | 服务端模块声明，见第 6 节 |
+| `defaultSize` | object | 否 | 工作台首次预览视口，`width`/`height` 为正整数 |
+| `fields` | array | 是 | 参数定义，顺序即表单顺序 |
 
-入口路径不接受绝对地址、`../`、查询参数或路径中的空格，建议使用英文文件名。`entry.css` 必须是数组；当前 `npm run check` 要求插件实际生成至少一个独立 CSS 文件。
+路径规则：必须以 `./` 开头，不允许 `../`、绝对路径、空段、`.`、`..`、查询参数或空格。建议全部使用英文文件名。
 
-配置文件是公开资源，不应包含服务端 Token、密码或私钥。
+发布配置会删除 `server` 字段；前端与嵌入页看不到服务端声明。
 
-### 图标配置
-
-插件图标统一为图片对象，工作台与嵌入页共用同一 `<img>` 渲染路径。
-
-本地 PNG、JPG/JPEG、GIF、WebP、AVIF、SVG 或 ICO：
+### 3.2 图标
 
 ```json
-"icon": { "type": "image", "src": "./assets/icon.svg", "alt": "日期时钟", "fallback": "◷" }
+"icon": {
+  "type": "image",
+  "src": "./icon.svg",
+  "alt": "日期时钟",
+  "fallback": "◷"
+}
 ```
 
-远程图片只接受 HTTP(S) 完整 URL：
+- 本地图片相对 `config.json`，支持 png/jpg/jpeg/gif/webp/avif/svg/ico。构建时复制为 `assets/icon-[hash].扩展名` 并改写发布配置与清单。
+- 远程图片只接受 `http(s)` URL，构建时不下载。
+- 统一用 `<img>` 渲染，按 24×24 区域等比显示；`alt` 默认空，加载失败显示 `fallback`，未配置时显示 `◷`。
+- 不再支持文本、Emoji 或内联 SVG 作为图标类型。
 
-```json
-"icon": { "type": "image", "src": "https://example.com/icon.png", "fallback": "👋" }
-```
-
-上面的片段是 `config.json` 内的属性，不是独立 JSON 文档。图片对象的 `alt` 和 `fallback` 是可选字符串；alt 默认空字符串，图片失败时显示 fallback，未配置或为空时显示 ◷。文本、Emoji、图标库名称和内联 SVG/HTML 不在当前协议内。
-
-本地 src 相对于 config.json，须以 ./ 开头，不允许 ../、绝对路径、空格或查询参数。文件必须存在。构建器自动将图标发布为 `assets/icon-[hash].扩展名`，并更新发布配置与清单；该图标无需代码引用，也不会内联。远程图片由浏览器加载，构建时不下载、不复制；HTTPS 页面建议使用 HTTPS 图片地址。
-
-开发清单与生产清单均将本地 src 解析为站点根路径，单份发布配置仍保留相对路径。外部工作台应按配置 URL 解析本地图标路径。图片按 24×24 区域等比显示；SVG 通过 img 加载，不将内容插入 DOM。
-
-## 4. 参数字段规范
-
-### 4.1 通用属性
+### 3.3 字段通用属性
 
 | 属性 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `key` | string | 是 | 唯一参数名，格式为 `[a-zA-Z][a-zA-Z0-9_]*` |
-| `label` | string | 是 | 表单显示名称 |
-| `type` | string | 是 | 下表中的六种类型之一 |
-| `default` | string | 是 | 默认值；数字和开关也使用字符串 |
-| `options` | array | select 必填 | `{ "value": "值", "label": "名称" }` 数组 |
-| `min` / `max` | number | 否 | 数值上下限，不能写成字符串 |
-| `step` | number | 否 | 大于零的输入步长 |
-| `required` | boolean | 否 | 统一必填校验，同时提供给设置控件 |
-| `placeholder` | string | 否 | 输入框占位文字 |
-| `description` | string | 否 | 显示为字段说明 |
-| `minLength` / `maxLength` | number | 否 | 文本长度限制，非负整数；maxLength 默认 120 |
-| `pattern` / `patternMessage` | string | 否 | 文本完整匹配正则及失败提示，无需添加 ^ / $ |
-| `control` | object | 否 | 设置组件的表现形式；不重复定义参数限制 |
-| `defaultValue` | object | 否 | 日期字段的动态默认值，见下文 |
+| `key` | string | 是 | `[a-zA-Z][a-zA-Z0-9_]*`，同一配置内唯一 |
+| `label` | string | 是 | 表单名称 |
+| `type` | string | 是 | `text` / `number` / `select` / `checkbox` / `color` / `datetime-local` |
+| `default` | string | 是 | 一律字符串，包括数字与开关 |
+| `description` | string | 否 | 字段说明 |
+| `placeholder` | string | 否 | 占位文字 |
+| `required` | boolean | 否 | 必填校验 |
+| `control` | object | 否 | 编辑控件，见 3.5 |
 
-同一配置中 `key` 不能重复。字段顺序就是工作台表单顺序。未定义的 URL 参数会显示错误及支持的参数列表；同名 URL 参数重复也报错。
+各类型的额外属性：
 
-类型、默认值和限制只定义在参数上。工作台与嵌入页复用 src/config-validation.js；控件只读取这些规则。工作台允许保留编辑中的无效值，并显示字段错误，全部参数有效后才更新 URL 和预览。嵌入页先校验，再加载插件 JS/CSS；任何错误都显示具体参数、收到的值、原因和建议，不截断、不夹取数值，也不悄悄替换成默认值。默认值只用于缺失的 URL 参数。
-
-### 4.2 支持的类型与 URL 解析行为
-
-| 类型 | 默认值示例 | 工作台控件 | 嵌入页处理 |
-| --- | --- | --- | --- |
-| `text` | `"你好"` | 单行文本框 | 校验长度、必填和正则；超限报错，默认最多 120 个字符 |
-| `number` | `"30"` 或 `""` | 数字输入框 | 校验有效数值、min/max/step；错误直接显示；结果仍是字符串 |
-| `select` | `"auto"` | 单选下拉框 | 值必须属于 options，否则报错 |
-| `checkbox` | `"1"` / `"0"` | 开关 | 只接受 1 / 0，其余值报错 |
-| `color` | `"#6c5ce7"` | 颜色选择器 | 只接受六位十六进制颜色，否则报错 |
-| `datetime-local` | `"2026-10-17T12:30"` | 本地日期时间输入框 | 校验真实本地日期时间；格式或日期无效时报错 |
-
-`select` 的选项值和名称必须是字符串，选项值不能重复，默认值必须匹配其中一个选项。`checkbox` 不使用布尔值作为默认值。
-
-### 4.3 公共参数
-
-推荐所有插件保留以下字段，直接复制已有插件配置即可：
-
-| key | 作用 | 推荐默认值 |
+| 类型 | 额外属性 | 规则 |
 | --- | --- | --- |
-| `width` | 固定宽度，像素 | `""`，min 280 / max 1200 |
-| `height` | 固定高度，像素 | `""`，min 160 / max 1000 |
-| `theme` | auto / light / dark | `"auto"` |
-| `accent` | 强调色 | `"#6c5ce7"` |
+| `text` | `minLength`、`maxLength`、`pattern`、`patternMessage` | 长度与正则只作用于 text；正则需完整匹配，不需要写 `^`/`$` |
+| `number` | `min`、`max`、`step` | 数值型；`default` 为空字符串表示允许留空；默认值必须合法且符合步长 |
+| `select` | `options` | `[{ value, label }]`，value 不重复，`default` 必须属于 options |
+| `checkbox` | 无 | `default` 只能是 `"0"` 或 `"1"` |
+| `color` | 无 | `default` 必须是 `#rrggbb` |
+| `datetime-local` | `defaultValue` | 可选 `{ "kind": "relative-date", "days": 7 }`，仅按本地日历日偏移 |
 
-`npm run check` 要求 `width`、`height` 为 number，有 min/max，默认值为空字符串。默认空宽高表示适配 iframe 可视区域；拖动工作台预览框只改变预览区域，不会改写插件尺寸。
+`width` 与 `height` 是框架校验的硬性要求：两项都必须是 `number` 类型、带 `min`/`max`、默认值为空字符串，以保证嵌入页默认自适应。`theme` 与 `accent` 是推荐字段，不强制。
 
-加载器设置根元素的 `data-theme` 和 `--widget-width` / `--widget-height`。导入 `shared.css` 后，`.embed-card` 支持浅色、深色和跟随系统主题；强调色需要插件自己设置 `--accent`。
+参数值协议：所有值都是字符串；checkbox 用 `"1"`/`"0"`。嵌入页先校验再加载插件资源，任何非法参数都显示错误页，不会截断、夹取或悄悄替换为默认值。默认值只用于缺失的 URL 参数。
 
-### 4.4 动态默认日期
+### 3.4 动态默认日期
 
 ```json
 {
@@ -274,24 +267,22 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 }
 ```
 
-当前只支持 `relative-date`，仅用于 `datetime-local`。`days` 为有限数值，绝对值不超过 36500，建议使用整数。默认日期按浏览器本地时间加日历天数，秒和毫秒归零；不会执行 JSON 中的函数或脚本。
+`defaultValue` 在配置加载时按浏览器当前时间计算；`days` 绝对值不超过 36500。工作台生成 URL 时总会写入该字段的当前值，避免复制后日期漂移。业务上不可为空时同时设置 `required: true`。
 
-动态默认日期在配置加载时计算。工作台总会把此类字段的当前值写入生成 URL，以保证复制后的目标日期固定。手工访问不含 target 的 URL 时，则按打开页面的日期计算默认值。日期字段若业务上不可为空，应设置 required: true；动态默认字段仍需保留 default 字符串。
+### 3.5 编辑控件 control
 
-### 4.5 设置控件（control）
+`type` 决定值语义，`control.type` 决定编辑形式。未指定时：select 用下拉框，checkbox 用开关，其余用输入框。
 
-参数的 type 决定值语义，control.type 决定编辑形式。不填 control 时兼容原有默认控件。
-
-| control.type | 兼容参数类型 | 加载方式 |
+| control.type | 兼容字段类型 | 说明 |
 | --- | --- | --- |
-| input | text / number / color / datetime-local | 使用时动态加载 input 模块 |
-| slider | number | 动态加载 slider；showInput 为 true 时复用 input 模块 |
-| select | select | 动态加载下拉控件 |
-| radio | select | 动态加载单选按钮组 |
-| switch | checkbox | 动态加载开关 |
-| custom | 当前支持的任意参数类型 | 动态加载插件自定义模块，仍走统一参数校验 |
+| `input` | text / number / color / datetime-local | 默认输入框 |
+| `slider` | number | 需要有限且不相等的 `min`/`max`；可选 `showInput`、`unit` |
+| `select` | select | 下拉框 |
+| `radio` | select | 单选按钮组 |
+| `switch` | checkbox | 开关 |
+| `custom` | 任意字段类型 | 插件提供的 React 组件 |
 
-滑块与输入框共用参数限制：
+滑块示例：
 
 ```json
 {
@@ -301,226 +292,282 @@ http://127.0.0.1:5173/widget/hello?title=欢迎&theme=dark
 }
 ```
 
-slider 必须提供有限且不同的 min/max。step 的基准为 min，未设置 min 时为 0。未设置 step 则不限制步长。数字默认值为空且非必填时允许留空（例如宽高）；其他数字字段清空会显示错误。min/max/step 只用于 number，长度与正则只用于 text。控制对象不允许重复放 min/max/step、required、options、长度或正则约束。
+`control` 是严格对象，只允许 `type`、`unit`、`showInput`、`entry`、`css`、`export`、`props`，不能把字段级约束重复放进来。
 
-自定义设置控件：
+#### 自定义控件
+
+自定义控件只在工作台使用，不会进入嵌入页。它必须是 **默认导出的 React 组件**：
 
 ```json
 {
-  "key": "title", "label": "标题", "type": "text", "default": "你好", "maxLength": 80,
-  "control": {
-    "type": "custom",
-    "entry": "./controls/title-input.js",
-    "props": { "showCount": true }
-  }
+  "key": "title", "label": "标题", "type": "text", "default": "你好",
+  "control": { "type": "custom", "entry": "./components/TitleInput.tsx", "css": ["./components/title.css"] }
 }
 ```
 
-entry 使用插件目录内的相对 JS 路径。模块默认导出命名函数 mount；若模块提供多个控件，可导出对象，例如 export const compact = { mount }，配置中设置 control.export 为 compact。control.props 是额外显示或交互配置对象。可选 control.css 为相对 CSS 路径数组；也可从控件 JS 导入 CSS。构建时将同一插件的自定义控件聚合为独立 controls-[hash].js，自动改写 entry、export 和 css，插件渲染 JS 不包含这些设置组件。
+```tsx
+import type { ControlProps } from "../../../src/workbench/components/controls/types.js";
 
-完整控件接口：
+export default function TitleInput({ field, value, onChange }: ControlProps) {
+  return (
+    <input
+      value={value}
+      maxLength={"maxLength" in field ? field.maxLength : undefined}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label={field.label}
+    />
+  );
+}
+```
 
-```js
-export function mount(root, { field, value, props, onChange, signal }) {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.id = "field-" + field.key;
-  input.value = value;
-  if (field.maxLength !== undefined) input.maxLength = field.maxLength;
-  input.addEventListener("input", () => onChange(input.value), { signal });
-  root.append(input);
+- 入参：`field`、`value`、`onChange(nextValue: string)`，另有 `widgetBase`。
+- `onChange` 接收原始字符串，校验由宿主统一执行；不要自己夹取或改写值。
+- 可用 antd 组件与 React hooks，但不要在控件里保存全局状态。
+- 构建时同一插件的自定义控件聚合为 `controls-[hash].js`，样式聚合为 `controls-[hash].css`；渲染入口不会包含这些代码。
+- 加载失败或未导出默认组件时，工作台在该字段位置显示错误提示，不会回退到默认控件；此时刷新页面修复资源路径后重试。
+
+## 4. 前端运行时协议
+
+```ts
+import type { WidgetRenderOptions } from "../../src/core/runtime/index.js";
+
+export function render(
+  root: HTMLElement,
+  config: Record<string, string>,
+  options: WidgetRenderOptions
+) {
+  // 在这里创建 DOM、发起请求、启动定时器
   return {
-    setValue(nextValue) { input.value = nextValue; },
-    destroy() { root.replaceChildren(); }
+    update(nextConfig, updateOptions) { /* 原地更新 */ },
+    destroy() { /* 清理 */ }
   };
 }
 ```
 
-mount 可返回 Promise；必须最终返回 setValue 和 destroy。onChange 接收字符串原始编辑值，工作台负责校验与状态管理；setValue 是宿主向控件同步值的入口，应避免调用 onChange 形成反馈循环。不要依赖 FormData 或原生 input name 来保存值。监听器和 fetch 使用 signal，定时器等在 destroy 中清理；异步过程中检查 signal.aborted，避免继续操作已销毁的 DOM。
+- `root` 是插件容器（当前为 `#app`），只操作其中的节点。
+- `config` 是校验后的字符串对象，按业务转换：`Number(config.refresh)`、`config.seconds === "1"`。
+- `options.signal` 表示实例存活期；请求、监听器与定时器都应绑定它。
+- `options.authToken` 是嵌入令牌，来自 `#t=`；没有令牌时为 `undefined`。
+- 返回值可以是 `void`、清理函数，或 `{ update?, destroy? }`。
 
-切换插件时先取消请求、abort 控件作用域，再 destroy 已挂载实例。过期的异步结果不会继续挂载，迟到的实例会立即销毁。成功模块和配置保留页面缓存；相同控件的并发加载合并。加载失败会显示提示并回退字段默认控件，失败请求允许重试。旧控件实例不会复用，切换回插件时重新创建实例，但保留页面内参数草稿。
+### 更新与销毁
 
-## 5. JavaScript 接口与生命周期
+- 返回对象带 `update` 时，参数变化会原地更新，不重建 DOM、不重新拉数据。
+- 没有 `update` 时，宿主销毁旧实例并重新 `render`。
+- `update` 应只改受影响的部分，并跳过与上一次相同的值。
+- `destroy` 必须清理未绑定 `signal` 的定时器、订阅与事件。
+- 异步请求应使用“代次守卫”或检查 `signal.aborted`，丢弃过期响应。
 
-```js
-export function render(root, config) {
-  // root：插件专属挂载元素，当前是 #app。
-  // config：根据 fields 和 URL 解析后的参数对象。
-}
-```
+### 主题与尺寸
 
-参数值均为字符串，按业务需要转换：
-
-```js
-const intervalMs = Number(config.refresh) * 1000;
-const showSeconds = config.seconds === "1";
-const target = new Date(config.target);
-if (!Number.isFinite(target.getTime())) {
-  root.textContent = "请选择有效的目标时间";
-  return;
-}
-```
-
-模块只导出 `render` 即可，不需要导出 `fields`。避免在模块顶层访问 `document`、创建定时器或发起请求：构建检查会在 Node.js 中导入产物，顶层依赖浏览器对象会导致验证失败。DOM 操作放入 `render`，查询尽量限定在 `root` 内。
-
-加载器等待 render 的返回值。纯静态插件可以不返回；有资源的插件应返回销毁函数或包含 destroy 的对象。可选对象 update 用于复用实例；缺少 update 时，参数变化先 abort 和 destroy 旧实例，再重新 render。工作台有效输入经 250ms 防抖后通过同源 postMessage 更新预览，不重载 iframe；切换插件才卸载 iframe。
-
-```js
-export function render(root, config, { signal }) {
-  const title = document.createElement("h1");
-  root.replaceChildren(title);
-  const apply = next => { title.textContent = next.title; };
-  apply(config);
-  // fetch(url, { signal }) 会在实例退出时取消。
-  return {
-    update(nextConfig, { signal: updateSignal, lifetimeSignal }) {
-      if (!updateSignal.aborted && !lifetimeSignal.aborted) apply(nextConfig);
-    },
-    destroy() { root.replaceChildren(); }
-  };
-}
-```
-
-render 的 signal 表示实例存活期。异步 update 串行执行，新的更新会取消上一更新的 signal 并跳过过期的排队更新；异步更新应遵守 signal，执行 DOM 修改前检查是否已取消。destroy 也应清理未绑定到 signal 的事件、定时器和订阅。挂载失败会取消该作用域；异步渲染完成时若已过期，会立即清理返回实例。
-
-使用用户输入时，优先赋给 `textContent`；拼接 HTML 时使用 `escapeHtml`。定时器和监听器可在 `pagehide` 中清理：
-
-```js
-const timer = setInterval(update, 1000);
-window.addEventListener("pagehide", () => clearInterval(timer), { once: true });
-```
-
-## 6. 静态资源
-
-插件可以包含图片、SVG、字体、音频及数据文件。推荐目录：
+宿主在 `documentElement` 上设置：
 
 ```text
-widgets/hello/
-  config.json
-  index.js
-  style.css
-  assets/
-    background.png
-    font.woff2
-    notice.mp3
-    data.json
+data-theme = auto | light | dark
+--widget-width  = 固定宽度或 auto
+--widget-height = 固定高度或 auto
+body.auto-height 存在表示未设置固定高度
 ```
 
-JS 中静态导入图片或音频会得到构建后的 URL：
+插件无需处理这三个参数本身。导入 `../shared.css` 可使用 `.embed-card`、`.embed-label` 等共享样式；`auto` 主题由 CSS 根据系统偏好解析。`width`/`height` 只控制外层容器，插件内部应使用相对单位与 `clamp()` 适配。
 
-```js
-import backgroundUrl from "./assets/background.png";
-import audioUrl from "./assets/notice.mp3";
-import data from "./assets/data.json";
+### 异步与错误
 
-// 在 render 内使用：
-const image = document.createElement("img");
-image.src = backgroundUrl;
-image.alt = "背景图";
-root.append(image);
-```
-
-JSON 普通导入是数据对象；希望获得可 fetch 的资源 URL，可使用：
-
-```js
-import dataUrl from "./assets/data.json?url";
-// 在 render 内：const response = await fetch(dataUrl);
-```
-
-CSS 中引用：
-
-```css
-.hello-card {
-  background-image: url("./assets/background.png");
-}
-
-@font-face {
-  font-family: "HelloFont";
-  src: url("./assets/font.woff2") format("woff2");
-}
-```
-
-构建规则：
-
-- 被 JS 或 CSS 静态引用的资源会参与构建，通常输出到插件的 `assets/`，文件名带哈希；小资源可能内联为 data URL。
-- 未被引用的文件不会因为放入 `assets/` 就自动复制到 dist。当前没有整目录复制、保留原文件名的配置能力。
-- 不要硬编码 `/widgets/hello/assets/background.png`，发布后的文件名可能带哈希；使用 import 得到的 URL 或 CSS 相对引用。
-- 动态拼接的资源路径不会自动遍历目录。资源列表可用明确的静态导入建立映射。
-- `entry.css` 只描述样式入口，不是静态文件列表；当前没有 `entry.assets` 或 `staticDir` 字段。
-- 本地图标可以仅通过顶层 `icon` 引用，不必在 JS 中 import；构建器会单独发布图标。
-
-## 7. API 请求
-
-插件通过同源 `/api/*` 调用项目后端。开发模式由 Vite 代理到 `http://127.0.0.1:3000`，生产环境由 Nginx 转发。
-
-```js
-// 在 render 内调用，插件需自行呈现加载和失败状态。
-async function loadStatus() {
+```ts
+export async function render(root, config, { signal }) {
+  root.textContent = "加载中…";
   try {
-    const response = await fetch("/api/health", { cache: "no-store" });
+    const response = await fetch("/api/example", { signal, cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    root.textContent = JSON.stringify(data);
-  } catch {
+    if (signal.aborted) return;
+    root.textContent = data.text;
+  } catch (error) {
+    if (signal.aborted) return;
     root.textContent = "暂时无法获取数据";
   }
 }
-loadStatus();
 ```
 
-新增后端能力需要在 `server/index.js` 中实现相应接口。JSON 配置不会自动创建 API。服务密钥由服务端 `.env` 读取，不放到插件配置或前端 `VITE_*` 环境变量中。
+- `render` 抛错时宿主显示“组件加载失败”。
+- render 之后由定时器或独立请求产生的错误，插件要自行捕获并展示。
+- 不要把 DOM 操作、定时器或请求放在模块顶层：构建校验会在 Node 中导入产物，顶层访问浏览器对象会导致失败。
+- 拼接 HTML 时对用户输入使用 `escapeHtml`；能用 `textContent` 就不拼 HTML。
 
-## 8. 构建产物与发布
+## 5. 静态资源
 
-```powershell
-npm run check
+```ts
+import backgroundUrl from "./assets/background.png";
+import audioUrl from "./assets/notice.mp3";
+import data from "./assets/data.json";
+import dataUrl from "./assets/data.json?url";
 ```
 
-该命令验证图标、严格参数校验、请求缓存与控件/插件生命周期，再检查后端语法，构建工作台与每个插件，并验证配置、元信息、资源路径、JS 的 `render` 导出、尺寸字段及 CSS 产物。
+- JS 或 CSS 静态引用的资源会参与构建，输出到插件的 `assets/`，文件名带哈希；小文件可能内联。
+- 没有被引用的文件不会因为放在 `assets/` 就自动复制。
+- 不要硬编码 `/widgets/{id}/assets/background.png`，使用 import 得到的 URL 或 CSS 相对引用。
+- 本地图标由 `icon.src` 单独发布，不必在 JS 中 import。
+- 服务端模块禁止 import CSS 或产生非 JS 资源。
 
-只构建可执行 `npm run build`，本地检查发布产物可执行 `npm run preview`，访问 `http://127.0.0.1:4173`。涉及 API 的插件还需要运行后端，例如在另一个终端执行 `npm run dev:api`。
+## 6. 服务端模块
+
+插件可以声明自己的 API 路由。前端与服务端产物完全独立：前端构建只看 `entry`，服务端构建只看 `server.entry`，两者互不 import。
+
+### 6.1 config.json 声明
+
+```json
+{
+  "server": {
+    "entry": "./server.ts",
+    "expose": ["GET /api/secret_demo/secret"],
+    "auth": "token",
+    "credentials": [
+      {
+        "ref": "secretDemo.default",
+        "label": "演示密钥",
+        "description": "在设置 → 第三方密钥中填入任意字符串。",
+        "placeholder": "例如 demo-3f9a2c",
+        "required": true
+      }
+    ]
+  }
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `entry` | `./` 开头的 `.js/.ts` 服务端入口 |
+| `expose` | 接口白名单，至少一条；只有这里的 key 会被挂载 |
+| `auth` | `"none"` 或 `"token"`；缺省按 `"none"` |
+| `credentials` | 可读取的第三方密钥；字符串或对象数组 |
+
+`credentials` 条目：`ref` 必须是 `provider.slot` 形式，`label` 必填，`description`/`placeholder` 可选，`required` 缺省为 `true`。声明了凭据的插件必须同时设置 `auth: "token"`。
+
+### 6.2 路由模块
+
+```ts
+import type { WidgetRouteHandler } from "../../src/core/server/plugin-server.js";
+
+const handlers: Record<string, WidgetRouteHandler> = {
+  "GET /api/secret_demo/secret": (_request, response, ctx) => {
+    response.set("Cache-Control", "no-store");
+    try {
+      const value = ctx.credential("secretDemo.default");
+      return response.json({ configured: true, value, length: Array.from(value).length });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith("未配置凭据")) {
+        return response.json({ configured: false });
+      }
+      return response.status(403).json({ error: message });
+    }
+  }
+};
+
+export const routes = handlers;
+```
+
+- 必须导出 `routes` 对象，key 与 `expose` 完全一致，值为处理函数。
+- 处理函数签名：`(request, response, ctx)`，可返回 Promise。
+- `response` 提供 `status(code)`、`json(body)`、`set(field, value)`，与 Express 结构兼容。
+- `request` 提供 `method`、`path`、`query`、`params`、`headers`。
+- `ctx.credential(ref)` 只允许读取已声明的凭据；未声明会直接抛错，不会返回空值。
+
+### 6.3 路由规则
+
+- key 形如 `GET /api/xxx`，方法支持 GET/POST/PUT/PATCH/DELETE。
+- 路径只允许静态段，不能带参数、通配、查询、结尾斜杠或 `..`。
+- key 在所有插件间必须唯一。
+- 保留路由：`GET /api/health`；保留前缀：`/api/auth/`、`/api/admin/`。
+- 未在 `expose` 中声明的 handler 会被忽略；声明与实现不一致会导致整个插件加载失败。
+- 路由精确匹配，`/api/weather` 不会误匹配 `/api/weatherXYZ`。
+
+### 6.4 鉴权
+
+`auth: "none"`：接口公开。
+
+`auth: "token"`：
+
+- 带 `Authorization: Bearer <token>` 时只认令牌。无效、已注销、IP 被禁用或未授权所需凭据会返回 401/403。
+- 不带 Bearer 时接受管理员会话 Cookie，用于工作台同源预览。
+- 嵌入页必须使用带 `#t=` 的地址；插件从 `options.authToken` 取令牌并自行加请求头。
+
+```ts
+const headers = options.authToken
+  ? { Authorization: `Bearer ${options.authToken}` }
+  : {};
+await fetch("/api/secret_demo/secret", { headers, cache: "no-store" });
+```
+
+令牌通过「工作台 → 签发令牌」生成，绑定当前插件、当前参数与勾选的密钥。明文只显示一次。令牌调用会写入调用记录；工作台会话预览不计数。
+
+### 6.5 第三方密钥
+
+- 在「设置 → 第三方密钥」中按 `provider.slot` 配置，服务端加密存储。
+- 建议 `ref` 的 provider 使用插件 ID 的驼峰形式（如 `weatherApi`），slot 使用 `default` 或业务名。
+- 读取时优先匹配 `provider.<widgetId>`，没有则使用声明的 slot。同一 provider 可被多个插件共享。
+- 未配置是正常业务状态：接口可返回 `200 + { configured: false }`，让组件展示配置引导。
+- 明文不要写日志、不要放缓存；接口加 `Cache-Control: no-store`。
+- 令牌只能读取签发时勾选的凭据；未勾选会返回“未授权该凭据”。
+
+### 6.6 编译与运行
+
+- 开发模式由 `npm run dev:api` 通过 `tsx` 直接加载 `server.entry`，修改后自动重启。
+- 生产由 `npm run build` 单独 SSR 编译为 `dist/widgets/{id}/server.js`，API 启动时加载。
+- 只允许 import Node 内置模块或根 `package.json` 的 `dependencies`；其他依赖会在构建时报错。
+- 服务端模块不能 import CSS 或产出图片等非 JS 资源。
+- 修改服务端代码后必须重新构建并重启 API；`server.js` 与 `server-chunks/` 由 Nginx 返回 404，不会公开下载。
+
+## 7. 构建、预览与校验
+
+```bash
+npm run check     # 类型检查 + 单元测试 + 全量构建 + 产物校验
+npm run build     # 只构建
+npm run preview   # 预览 dist，另开终端运行 npm run dev:api
+```
+
+`npm run check` 会验证：
+
+- 目录名与 `config.id` 一致，必填元信息完整。
+- `width` / `height` 为 number、有 min/max、默认值为空。
+- 每个插件导出 `render`，并生成至少一个独立 CSS 产物。
+- 清单、发布配置、入口、图标与静态资源一致。
+- 服务端入口存在、导出 `routes`、覆盖所有 `expose`，路由不冲突且不占用保留前缀。
+
+预览地址：
 
 ```text
-dist/
-  index.html
-  assets/                         工作台资源
-  widgets/
-    manifest.json                 插件目录清单
-    hello/
-      config.json                 发布配置
-      index-[hash].js
-      style-[hash].css
-      controls-[hash].js          按需生成的自定义设置组件
-      controls-[hash].css         按需生成的设置组件样式
-      chunks/                     按需生成的 JS 分块
-      assets/                     未内联的静态资源
+http://127.0.0.1:5173/?widget={id}
+http://127.0.0.1:5173/widget/{id}?参数=值
 ```
 
-源码配置的入口指向 `./index.js`、`./style.css`。构建会把发布配置的 `entry.js/css` 自动替换为实际带哈希的相对路径，并生成清单中的绝对 URL。不要手动编辑 dist 文件；下次构建会重建输出。
+发布只修改源码并由构建生成产物，不要手改 `dist/`。
 
-交付插件源码、注册改动和验证结果。项目部署及工作台接入由项目框架文档维护，不需要为每个插件重复实现。
+## 8. 常见问题
 
-## 9. 常见问题
-
-| 现象 | 检查位置 |
+| 现象 | 检查 |
 | --- | --- |
-| 插件没有出现在列表 | ID 是否注册、配置 id 是否一致，开发服务是否已重启 |
-| 配置加载失败 | JSON 语法、schemaVersion、必填元信息、字段默认值、入口路径 |
-| 选项修改后仍未更新 | 页面内缓存了清单和配置，刷新页面；生产环境重新构建并部署 |
-| 有配置但样式未打包 | JS 是否 import 了 CSS；entry.css 本身不会引入样式 |
-| 图片、字体返回 404 | 是否通过 import / CSS url 引用，是否硬编码了未带哈希文件名 |
-| 定时器或请求出错却没有显示加载错误 | 异步回调需插件自行捕获；加载器处理加载及 await render/update 错误，后续定时器或独立请求需自行捕获 |
-| 数字字段在插件中计算异常 | config 值是字符串，应先 Number 转换 |
-| 倒计时目标时间无效 | 检查错误页给出的真实日期与格式要求 |
-| Node 构建检查提示 document 未定义 | 把顶层 DOM 操作移到 render 内 |
-| API 请求失败 | 后端是否启动，路径是否为 /api，服务端环境变量是否正确 |
+| 工作台列表没有新插件 | 目录内是否有 `config.json`；id 是否与目录名一致；是否需要重启 API |
+| 配置加载失败 | JSON 语法、`schemaVersion`、必填字段、路径是否以 `./` 开头 |
+| 修改配置后页面没变 | 页面缓存了清单/配置，刷新；生产需重新构建部署 |
+| 样式没生效 | JS 是否 import 了 CSS |
+| 图片或字体 404 | 是否通过 import / CSS `url()` 引用；不要硬编码哈希文件名 |
+| 构建报 `document is not defined` | 把顶层 DOM 操作移进 `render` |
+| 参数类型异常 | 所有 config 值都是字符串，先 `Number()` 或比较 `"1"` |
+| 参数错误页 | 按页面提示修正 URL；未知参数与重复参数都会报错 |
+| 嵌入页显示缺少令牌 | 插件是否 `auth: "token"`；是否复制了带 `#t=` 的完整链接 |
+| 接口 401 | 无 Bearer 且无管理员会话；检查嵌入令牌 |
+| 接口 403 | IP 被禁用、令牌未授权该凭据，或账号尚未完成首次改密 |
+| 服务端改动没生效 | 生产需重新构建并重启 API；开发确认 `tsx` 是否监听到目录 |
+| 服务端模块加载失败 | `expose` 与 `routes` 是否一致；是否 import 了未声明依赖 |
 
-## 10. 开发完成检查
+## 9. 完成检查
 
-1. 目录名、注册 ID 和 config.id 一致，元信息完整。
-2. 六种字段类型和默认值符合规范，保留自适应宽高。
-3. render 在 root 内渲染，正确处理字符串参数和异步失败。
-4. CSS 从 JS 导入，静态资源通过可构建的引用加载。
-5. 工作台选项、生成 URL、iframe 预览、深浅主题和不同尺寸表现正常。
-6. `npm run check` 通过，再用发布产物预览验证。
-7. 如有自定义控件，验证加载失败回退、切换销毁和模块复用；无效 URL 必须阻止插件资源加载。
+1. 目录名、`config.id` 一致，`summary`、`description`、`version`、图标完整。
+2. `fields` 类型与默认值合法，保留自适应 `width`/`height`，推荐保留 `theme`/`accent`。
+3. `render` 只在 `root` 内操作；参数按字符串转换；异步失败有可见反馈。
+4. 返回值实现 `update` / `destroy`，定时器、请求与监听器随 `signal` 清理。
+5. CSS 从 JS 导入；静态资源通过 import 或 CSS 相对路径引用。
+6. 工作台表单、URL、iframe 预览、浅色/深色、宽高与参数热更新均正常。
+7. 服务端接口若存在：`expose` 完整、`auth` 正确、凭据只在声明后读取、令牌路径验证通过。
+8. `npm run check` 通过，并用 `npm run preview` 验证生产产物。
