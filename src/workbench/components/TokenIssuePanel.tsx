@@ -62,19 +62,39 @@ export function TokenIssuePanel({
     };
   }, [widgetId]);
 
-  const configuredSet = useMemo(() => new Set(configured.map((item) => `${item.provider}.${item.slot}`)), [configured]);
+  // slot 语义：default=通用 / widgetId=专属。判断"已配置"时与后端 isConfigured 保持一致，
+  // 按 provider 维度查：存在 slot=default 或 slot=widgetId 的密钥都算已配置。
+  const configuredProviders = useMemo(() => {
+    const providers = new Map<string, Set<string>>();
+    for (const item of configured) {
+      if (!providers.has(item.provider)) providers.set(item.provider, new Set());
+      providers.get(item.provider)!.add(item.slot);
+    }
+    return providers;
+  }, [configured]);
+  const isConfigured = useMemo(() => {
+    return (ref: string) => {
+      const dot = ref.indexOf(".");
+      if (dot < 0) return false;
+      const provider = ref.slice(0, dot);
+      const slots = configuredProviders.get(provider);
+      if (!slots) return false;
+      // 匹配 slot=default（通用）或 slot=widgetId（专属）
+      return slots.has("default") || slots.has(widgetId);
+    };
+  }, [configuredProviders, widgetId]);
   const selectable = useMemo(
-    () => declared.filter((item) => configuredSet.has(item.ref)),
-    [declared, configuredSet],
+    () => declared.filter((item) => isConfigured(item.ref)),
+    [declared, isConfigured],
   );
   const requiredItems = useMemo(() => declared.filter((item) => item.required !== false), [declared]);
   const unconfiguredRequired = useMemo(
-    () => requiredItems.filter((item) => !configuredSet.has(item.ref)),
-    [requiredItems, configuredSet],
+    () => requiredItems.filter((item) => !isConfigured(item.ref)),
+    [requiredItems, isConfigured],
   );
   const unconfiguredOptional = useMemo(
-    () => declared.filter((item) => item.required === false && !configuredSet.has(item.ref)),
-    [declared, configuredSet],
+    () => declared.filter((item) => item.required === false && !isConfigured(item.ref)),
+    [declared, isConfigured],
   );
   const requiredSelectableRefs = useMemo(
     () => selectable.filter((item) => item.required !== false).map((item) => item.ref),

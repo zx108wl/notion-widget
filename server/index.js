@@ -69,7 +69,9 @@ for (const entry of table.values()) {
   for (const requirement of entry.credentialRequirements ?? []) {
     if (!list.some((item) => item.ref === requirement.ref)) list.push(requirement);
   }
-  widgetCredentialRequirements.set(entry.widgetId, list);
+  // 只登记真的声明了凭据需求的插件；否则空数组占 key 会让
+  // /credential-providers 的 widgets 选项把纯 API 插件（如 clock）混进来
+  if (list.length > 0) widgetCredentialRequirements.set(entry.widgetId, list);
   // 同一插件可能暴露多条路由：只要有一条要求令牌，整个插件的嵌入页就需要令牌
   if (entry.auth === "token") widgetAuth.set(entry.widgetId, "token");
   else if (!widgetAuth.has(entry.widgetId)) widgetAuth.set(entry.widgetId, "none");
