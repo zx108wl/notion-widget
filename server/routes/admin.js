@@ -239,7 +239,6 @@ export function createAdminRouter({
   // auth：插件接口是否需要令牌（"token" 的插件，嵌入链接必须由令牌页签发并复制）
   router.get("/widget-credentials", (_request, response) => {
     const widgets = {};
-    const auth = {};
     for (const [widgetId, requirements] of widgetCredentialRequirements) {
       widgets[widgetId] = requirements.map((item) => ({
         ref: item.ref,
@@ -249,7 +248,12 @@ export function createAdminRouter({
         // 未声明 required 一律按必选（与插件声明默认值一致）
         required: item.required !== false,
       }));
-      auth[widgetId] = widgetAuth.get(widgetId) === "token" ? "token" : "none";
+    }
+    // auth 必须遍历 widgetAuth 全集：只登记了凭据的插件才会进入 widgetCredentialRequirements，
+    // 若从这里取 auth 会漏掉"auth: token 但无凭据"的插件（如 clock），导致工作台误判为免令牌
+    const auth = {};
+    for (const [widgetId, authType] of widgetAuth) {
+      auth[widgetId] = authType === "token" ? "token" : "none";
     }
     response.set("Cache-Control", "no-store");
     return response.json({ widgets, auth });
