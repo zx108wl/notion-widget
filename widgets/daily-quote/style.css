@@ -33,14 +33,44 @@
   letter-spacing: .02em;
 }
 
-.quote-source {
+.quote-refresh {
   flex: none;
-  padding: 2px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: 1px solid rgb(255 255 255 / 32%);
   border-radius: 999px;
-  color: rgb(255 255 255 / 78%);
-  font-size: 11px;
-  letter-spacing: .08em;
+  color: rgb(255 255 255 / 85%);
+  background: rgb(255 255 255 / 12%);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.quote-refresh:hover {
+  border-color: rgb(255 255 255 / 52%);
+  background: rgb(255 255 255 / 22%);
+}
+
+.quote-refresh:disabled {
+  cursor: default;
+  color: rgb(255 255 255 / 60%);
+}
+
+.quote-refresh svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 加载中：图标旋转提示刷新进行中 */
+.quote-refresh:disabled svg {
+  animation: quote-spin .9s linear infinite;
+}
+
+@keyframes quote-spin {
+  to { transform: rotate(360deg); }
 }
 
 .quote-body {

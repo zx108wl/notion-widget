@@ -14,17 +14,6 @@ export interface DailyQuoteConfig {
 const HITOKOTO_ENDPOINT = "https://v1.hitokoto.cn/";
 const WALLPAPER_ENDPOINT = "https://wp.upx8.com/api.php";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  all: "随机",
-  d: "文学",
-  i: "诗词",
-  k: "哲学",
-  h: "影视",
-  a: "动画",
-  f: "来自网络",
-  l: "抖机灵",
-};
-
 interface HitokotoResponse {
   hitokoto?: unknown;
   from?: unknown;
@@ -38,8 +27,12 @@ function hitokotoUrl(category: string): string {
   return `${HITOKOTO_ENDPOINT}?${params}`;
 }
 
+// 每次都带时间戳参数：既避免浏览器缓存同一张图，也让壁纸 API 换一张随机图
 function wallpaperUrl(category: string): string {
-  const params = new URLSearchParams({ resolution: "1920x1080" });
+  const params = new URLSearchParams({
+    resolution: "1920x1080",
+    _: Date.now().toString(36),
+  });
   if (category && category !== "all") params.set("category", category);
   return `${WALLPAPER_ENDPOINT}?${params}`;
 }
@@ -55,7 +48,12 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
   root.innerHTML = `<section class="embed-card quote-card">
     <header class="quote-head">
       <p class="embed-label">${escapeHtml(config.title)}</p>
-      <span class="quote-source"></span>
+      <button class="quote-refresh" type="button" title="换一句与背景" aria-label="换一句与背景">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <polyline points="21 3 21 9 15 9" />
+        </svg>
+      </button>
     </header>
     <div class="quote-body">
       <blockquote class="quote-text">正在取一句…</blockquote>
@@ -66,7 +64,7 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
 
   const card = root.querySelector<HTMLElement>(".quote-card")!;
   const label = root.querySelector<HTMLElement>(".embed-label")!;
-  const sourceLabel = root.querySelector<HTMLElement>(".quote-source")!;
+  const refreshBtn = root.querySelector<HTMLButtonElement>(".quote-refresh")!;
   const quote = root.querySelector<HTMLElement>(".quote-text")!;
   const author = root.querySelector<HTMLElement>(".quote-author")!;
   const hint = root.querySelector<HTMLElement>(".quote-hint")!;
@@ -87,6 +85,7 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
   const setLoading = () => {
     card.classList.add("is-loading");
     card.classList.remove("is-error");
+    refreshBtn.disabled = true;
     quote.textContent = "正在取一句…";
     author.textContent = "";
     hint.textContent = "";
@@ -97,6 +96,7 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
   const setError = (message: string) => {
     card.classList.remove("is-loading");
     card.classList.add("is-error");
+    refreshBtn.disabled = false;
     quote.textContent = "没能取到今天的句子";
     author.textContent = "";
     hint.textContent = message;
@@ -123,6 +123,7 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
 
       card.classList.remove("is-loading");
       card.classList.remove("is-error");
+      refreshBtn.disabled = false;
       quote.textContent = content;
       author.textContent = attribution ? `— ${attribution}` : "";
       hint.textContent = "";
@@ -144,7 +145,12 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
     window.open(`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`, "_blank", "noopener,noreferrer");
   });
 
-  sourceLabel.textContent = CATEGORY_LABELS[current.category] ?? "随机";
+  // 点击刷新按钮：同时重取一言句子与背景图
+  refreshBtn.addEventListener("click", () => {
+    applyBackground();
+    void load(++run);
+  });
+
   applyBackground();
   void load(++run);
 
@@ -155,10 +161,7 @@ export function render(root: HTMLElement, config: DailyQuoteConfig, options: Wid
       current = { ...next };
       if (prev.title !== current.title) label.textContent = current.title;
       if (prev.backgroundCategory !== current.backgroundCategory) applyBackground();
-      if (prev.category !== current.category) {
-        sourceLabel.textContent = CATEGORY_LABELS[current.category] ?? "随机";
-        void load(++run);
-      }
+      if (prev.category !== current.category) void load(++run);
     },
     destroy() {
       run += 1;
