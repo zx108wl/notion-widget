@@ -22,7 +22,7 @@
     "expose": [
       "GET /api/weather"
     ],
-    "auth": "token"
+    "auth": "none"
   },
   "defaultSize": {
     "width": 360,
